@@ -1,0 +1,14 @@
+{
+  "name": "La Ligue des Copains",
+  "short_name": "Ligue Copains",
+  "description": "Ligue 1 2025-2026 — pronostics, bonus cachés et Commission de discipline entre copains",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "lang": "fr",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
