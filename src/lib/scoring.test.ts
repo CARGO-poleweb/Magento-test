@@ -136,6 +136,7 @@ describe("classement général", () => {
       [
         {
           id: "adj1",
+          season_id: 1,
           member_id: "alice",
           matchday_id: null,
           points: -2,

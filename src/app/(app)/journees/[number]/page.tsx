@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { PredictionForm } from "@/components/PredictionForm";
-import { formatKickoff, getSessionProfile } from "@/lib/data";
+import { formatKickoff, getCurrentSeason, getSessionProfile } from "@/lib/data";
 import { effectivePrediction, matchdayBreakdown } from "@/lib/scoring";
 import {
   isFixtureLocked,
@@ -21,10 +21,13 @@ const STATUS_CHIPS: Record<Prediction["status"], { label: string; className: str
 export default async function JourneePage({ params }: { params: Promise<{ number: string }> }) {
   const { number } = await params;
   const { supabase, profile } = await getSessionProfile();
+  const season = await getCurrentSeason(supabase);
+  if (!season) notFound();
 
   const { data: day } = await supabase
     .from("matchdays")
     .select("*, fixtures(*)")
+    .eq("season_id", season.id)
     .eq("number", Number(number))
     .single<Matchday & { fixtures: Fixture[] }>();
   if (!day) notFound();

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { parsePrediction } from "@/lib/parser";
-import { canJudge, getSessionProfile } from "@/lib/data";
+import { canJudge, getCurrentSeason, getSessionProfile } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isFixtureLocked, type BonusType, type Team } from "@/lib/types";
@@ -120,13 +120,13 @@ export async function submitHiddenBonus(
   const { profile } = await getSessionProfile();
   const service = createServiceClient();
 
-  const { data: season } = await service.from("season_settings").select("*").eq("id", 1).single();
-  if (!season) return { ok: false, title: "Saison non configurée" };
+  const season = await getCurrentSeason(service);
+  if (!season) return { ok: false, title: "Aucune saison en cours" };
   if (season.bonus_reveles || new Date() > new Date(season.bonus_deadline)) {
     return {
       ok: false,
       title: "Trop tard",
-      detail: "Les bonus cachés devaient être déposés avant le 30/09/2025, 23 h 59.",
+      detail: "La deadline de dépôt des bonus cachés est passée pour cette saison.",
     };
   }
 
@@ -144,8 +144,14 @@ export async function submitHiddenBonus(
   const { error } = await service
     .from("hidden_bonuses")
     .upsert(
-      { member_id: profile.id, type, answer, submitted_at: new Date().toISOString() },
-      { onConflict: "member_id,type" },
+      {
+        season_id: season.id,
+        member_id: profile.id,
+        type,
+        answer,
+        submitted_at: new Date().toISOString(),
+      },
+      { onConflict: "season_id,member_id,type" },
     );
   if (error) return { ok: false, title: "Erreur d'enregistrement", detail: error.message };
 
@@ -189,7 +195,10 @@ export async function addAdjustment(formData: FormData): Promise<void> {
   if (!memberId || !Number.isInteger(points) || points === 0 || !reason) return;
 
   const service = createServiceClient();
+  const season = await getCurrentSeason(service);
+  if (!season) return;
   await service.from("point_adjustments").insert({
+    season_id: season.id,
     member_id: memberId,
     matchday_id: matchdayId,
     points,
@@ -217,7 +226,9 @@ export async function createMatchday(formData: FormData): Promise<void> {
   if (!Number.isInteger(number) || number < 1 || number > 34) return;
 
   const service = createServiceClient();
-  await service.from("matchdays").insert({ number, type });
+  const season = await getCurrentSeason(service);
+  if (!season) return;
+  await service.from("matchdays").insert({ season_id: season.id, number, type });
   revalidatePath("/admin");
 }
 
@@ -312,19 +323,22 @@ export async function recordMise(formData: FormData): Promise<void> {
   const memberId = String(formData.get("member_id"));
   const service = createServiceClient();
 
-  const { data: season } = await service.from("season_settings").select("*").eq("id", 1).single();
+  const season = await getCurrentSeason(service);
+  if (!season) return;
   const { data: existing } = await service
     .from("ledger")
     .select("id")
+    .eq("season_id", season.id)
     .eq("member_id", memberId)
     .eq("type", "mise")
     .limit(1);
   if (existing && existing.length > 0) return; // déjà payé
 
   await service.from("ledger").insert({
+    season_id: season.id,
     member_id: memberId,
     type: "mise",
-    amount_cents: season?.mise_cents ?? 2000,
+    amount_cents: season.mise_cents,
     note: "Mise de départ (article 2)",
     created_by: president.id,
   });
@@ -339,7 +353,10 @@ export async function addAmende(formData: FormData): Promise<void> {
   if (!memberId || !(euros > 0)) return;
 
   const service = createServiceClient();
+  const season = await getCurrentSeason(service);
+  if (!season) return;
   await service.from("ledger").insert({
+    season_id: season.id,
     member_id: memberId,
     type: "amende",
     amount_cents: Math.round(euros * 100),
@@ -361,6 +378,108 @@ export async function setRadiation(formData: FormData): Promise<void> {
 export async function revealBonuses(): Promise<void> {
   await requirePresident();
   const service = createServiceClient();
-  await service.from("season_settings").update({ bonus_reveles: true }).eq("id", 1);
+  const season = await getCurrentSeason(service);
+  if (!season) return;
+  await service.from("seasons").update({ bonus_reveles: true }).eq("id", season.id);
   revalidatePath("/bonus");
+}
+
+// ---------------------------------------------------------------------------
+// Gestion des saisons : préparer 2026-2027 (et les suivantes) sans toucher à
+// la base — création, composition des 18 clubs, équipes concernées, bascule.
+// ---------------------------------------------------------------------------
+export async function createSeason(formData: FormData): Promise<void> {
+  await requirePresident();
+  const name = String(formData.get("name") ?? "").trim();
+  const miseEuros = Number(String(formData.get("mise") ?? "20").replace(",", "."));
+  const vainqueurEuros = Number(String(formData.get("part_vainqueur") ?? "15").replace(",", "."));
+  const ballonOrEuros = Number(String(formData.get("part_ballon_or") ?? "5").replace(",", "."));
+  const paiementDeadline = String(formData.get("paiement_deadline") ?? "");
+  const bonusDeadline = String(formData.get("bonus_deadline") ?? "");
+  if (!name || !paiementDeadline || !bonusDeadline) return;
+  if (!(miseEuros > 0) || !(vainqueurEuros >= 0) || !(ballonOrEuros >= 0)) return;
+
+  const service = createServiceClient();
+  const { data: created, error } = await service
+    .from("seasons")
+    .insert({
+      name,
+      mise_cents: Math.round(miseEuros * 100),
+      part_vainqueur_cents: Math.round(vainqueurEuros * 100),
+      part_ballon_or_cents: Math.round(ballonOrEuros * 100),
+      paiement_deadline: paiementDeadline,
+      bonus_deadline: parisToUtc(bonusDeadline),
+      is_current: false,
+    })
+    .select("id")
+    .single();
+  if (error || !created) return;
+
+  // On repart de la composition de la saison courante (promus/relégués à
+  // ajuster ensuite) ; les équipes concernées sont à re-cocher : le règlement
+  // en tire une au sort et en laisse une au choix du vainqueur sortant.
+  const current = await getCurrentSeason(service);
+  if (current) {
+    const { data: teams } = await service
+      .from("season_teams")
+      .select("team_id")
+      .eq("season_id", current.id);
+    if (teams && teams.length > 0) {
+      await service
+        .from("season_teams")
+        .insert(teams.map((t) => ({ season_id: created.id, team_id: t.team_id, tracked: false })));
+    }
+  }
+
+  revalidatePath("/admin");
+}
+
+export async function saveSeasonTeams(formData: FormData): Promise<void> {
+  await requirePresident();
+  const seasonId = Number(formData.get("season_id"));
+  if (!seasonId) return;
+
+  const service = createServiceClient();
+  const { data: season } = await service.from("seasons").select("*").eq("id", seasonId).single();
+  if (!season || season.is_current) return; // la composition se fige à la bascule
+
+  const { data: allTeams } = await service.from("teams").select("id");
+  const rows = (allTeams ?? [])
+    .filter((t) => formData.get(`in_${t.id}`) === "on")
+    .map((t) => ({
+      season_id: seasonId,
+      team_id: t.id,
+      tracked: formData.get(`tracked_${t.id}`) === "on",
+    }));
+
+  await service.from("season_teams").delete().eq("season_id", seasonId);
+  if (rows.length > 0) await service.from("season_teams").insert(rows);
+  revalidatePath("/admin");
+}
+
+export async function createTeam(formData: FormData): Promise<void> {
+  await requirePresident();
+  const shortName = String(formData.get("short_name") ?? "").trim().toUpperCase();
+  const fullName = String(formData.get("full_name") ?? "").trim();
+  const aliases = String(formData.get("aliases") ?? "")
+    .split(",")
+    .map((a) => a.trim().toUpperCase())
+    .filter(Boolean);
+  if (!shortName || !fullName) return;
+
+  const service = createServiceClient();
+  await service.from("teams").insert({ short_name: shortName, full_name: fullName, aliases });
+  revalidatePath("/admin");
+}
+
+export async function activateSeason(formData: FormData): Promise<void> {
+  await requirePresident();
+  const seasonId = Number(formData.get("season_id"));
+  if (!seasonId) return;
+
+  const service = createServiceClient();
+  // L'index unique n'autorise qu'une saison courante : on libère puis on prend.
+  await service.from("seasons").update({ is_current: false }).eq("is_current", true);
+  await service.from("seasons").update({ is_current: true }).eq("id", seasonId);
+  revalidatePath("/", "layout");
 }

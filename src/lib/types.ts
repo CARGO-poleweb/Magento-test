@@ -18,7 +18,20 @@ export type Team = {
   short_name: string;
   full_name: string;
   aliases: string[];
-  tracked: boolean;
+  /** Équipe concernée pour une saison donnée (via season_teams). */
+  tracked?: boolean;
+};
+
+export type Season = {
+  id: number;
+  name: string;
+  mise_cents: number;
+  part_vainqueur_cents: number;
+  part_ballon_or_cents: number;
+  paiement_deadline: string;
+  bonus_deadline: string;
+  bonus_reveles: boolean;
+  is_current: boolean;
 };
 
 export type MatchdayType = "classique" | "multiplex";
@@ -26,6 +39,7 @@ export type MatchdayStatus = "brouillon" | "publiee" | "terminee";
 
 export type Matchday = {
   id: number;
+  season_id: number;
   number: number;
   type: MatchdayType;
   status: MatchdayStatus;
@@ -71,6 +85,7 @@ export type BonusType =
 
 export type HiddenBonus = {
   id: string;
+  season_id: number;
   member_id: string;
   type: BonusType;
   answer: { value?: string; values?: string[] };
@@ -80,6 +95,7 @@ export type HiddenBonus = {
 
 export type LedgerEntry = {
   id: string;
+  season_id: number;
   member_id: string;
   type: "mise" | "amende" | "ajustement";
   amount_cents: number;
@@ -89,6 +105,7 @@ export type LedgerEntry = {
 
 export type PointAdjustment = {
   id: string;
+  season_id: number;
   member_id: string;
   matchday_id: number | null;
   points: number;

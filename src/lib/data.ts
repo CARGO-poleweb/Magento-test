@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import type { MemberRole, Profile } from "@/lib/types";
+import type { MemberRole, Profile, Season } from "@/lib/types";
 
 /** Rôles siégeant à la Commission de discipline (+ le Président, art. 1). */
 export const COMMISSION_ROLES: MemberRole[] = [
@@ -38,6 +39,16 @@ export async function getSessionProfile() {
   if (!profile) redirect("/login");
 
   return { supabase, user, profile };
+}
+
+/** La saison courante de la ligue (une seule à la fois). */
+export async function getCurrentSeason(supabase: SupabaseClient): Promise<Season | null> {
+  const { data } = await supabase
+    .from("seasons")
+    .select("*")
+    .eq("is_current", true)
+    .maybeSingle<Season>();
+  return data;
 }
 
 const dateFmt = new Intl.DateTimeFormat("fr-FR", {

@@ -1,15 +1,19 @@
 import { redirect } from "next/navigation";
 import {
+  activateSeason,
   addFixture,
   createMatchday,
+  createSeason,
+  createTeam,
   enterResult,
   finishMatchday,
   publishMatchday,
   revealBonuses,
+  saveSeasonTeams,
   setRadiation,
 } from "@/app/actions";
-import { formatKickoff, getSessionProfile } from "@/lib/data";
-import type { Fixture, Matchday, Profile, Team } from "@/lib/types";
+import { formatKickoff, getCurrentSeason, getSessionProfile } from "@/lib/data";
+import type { Fixture, Matchday, Profile, Season, Team } from "@/lib/types";
 
 const STATUS_LABELS = { brouillon: "brouillon", publiee: "publiée", terminee: "terminée" } as const;
 
@@ -17,18 +21,35 @@ export default async function AdminPage() {
   const { supabase, profile } = await getSessionProfile();
   if (profile.role !== "president") redirect("/");
 
-  const [{ data: matchdays }, { data: teams }, { data: profiles }, { data: season }] =
+  const season = await getCurrentSeason(supabase);
+
+  const [{ data: matchdays }, { data: teams }, { data: seasonTeams }, { data: profiles }, { data: seasons }] =
     await Promise.all([
-      supabase.from("matchdays").select("*, fixtures(*)").order("number"),
+      season
+        ? supabase
+            .from("matchdays")
+            .select("*, fixtures(*)")
+            .eq("season_id", season.id)
+            .order("number")
+        : Promise.resolve({ data: [] }),
       supabase.from("teams").select("*").order("short_name"),
+      supabase.from("season_teams").select("*"),
       supabase.from("profiles").select("*").order("display_name"),
-      supabase.from("season_settings").select("*").eq("id", 1).single(),
+      supabase.from("seasons").select("*").order("created_at"),
     ]);
 
   const days = (matchdays ?? []) as (Matchday & { fixtures: Fixture[] })[];
   const allTeams = (teams ?? []) as Team[];
   const teamById = new Map(allTeams.map((t) => [t.id, t]));
   const members = (profiles ?? []) as Profile[];
+  const allSeasons = (seasons ?? []) as Season[];
+  const memberships = (seasonTeams ?? []) as { season_id: number; team_id: number; tracked: boolean }[];
+
+  const currentMemberships = season ? memberships.filter((m) => m.season_id === season.id) : [];
+  const currentTeams = currentMemberships
+    .map((m) => ({ team: teamById.get(m.team_id), tracked: m.tracked }))
+    .filter((x): x is { team: Team; tracked: boolean } => Boolean(x.team))
+    .sort((a, b) => a.team.short_name.localeCompare(b.team.short_name));
 
   const TeamSelect = ({ name, label }: { name: string; label: string }) => (
     <select
@@ -37,10 +58,10 @@ export default async function AdminPage() {
       className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-2 text-sm"
     >
       <option value="">{label}</option>
-      {allTeams.map((t) => (
-        <option key={t.id} value={t.id}>
-          {t.short_name}
-          {t.tracked ? " ★" : ""}
+      {currentTeams.map(({ team, tracked }) => (
+        <option key={team.id} value={team.id}>
+          {team.short_name}
+          {tracked ? " ★" : ""}
         </option>
       ))}
     </select>
@@ -51,35 +72,38 @@ export default async function AdminPage() {
       <header>
         <h1 className="text-xl font-bold">🎩 Espace du Président</h1>
         <p className="text-xs text-neutral-500">
-          Article 1 : le Président a toujours raison. Article 10 : les membres ne voient une journée
-          qu’une fois publiée. ★ = équipes concernées.
+          Article 1 : le Président a toujours raison.{" "}
+          {season ? `Saison en cours : ${season.name}.` : "Aucune saison en cours !"} Les membres ne
+          voient une journée qu’une fois publiée (article 10). ★ = équipes concernées.
         </p>
       </header>
 
-      <section className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
-        <h2 className="mb-2 font-bold">Créer une journée</h2>
-        <form action={createMatchday} className="flex gap-2">
-          <input
-            name="number"
-            type="number"
-            min={1}
-            max={34}
-            required
-            placeholder="N°"
-            className="w-20 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
-          />
-          <select
-            name="type"
-            className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
-          >
-            <option value="classique">Classique (5 matchs)</option>
-            <option value="multiplex">Multiplex — J1 & J34 (9 matchs)</option>
-          </select>
-          <button className="rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold hover:bg-green-600">
-            Créer
-          </button>
-        </form>
-      </section>
+      {season && (
+        <section className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
+          <h2 className="mb-2 font-bold">Créer une journée · {season.name}</h2>
+          <form action={createMatchday} className="flex gap-2">
+            <input
+              name="number"
+              type="number"
+              min={1}
+              max={34}
+              required
+              placeholder="N°"
+              className="w-20 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
+            />
+            <select
+              name="type"
+              className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
+            >
+              <option value="classique">Classique (5 matchs)</option>
+              <option value="multiplex">Multiplex — J1 & J34 (9 matchs)</option>
+            </select>
+            <button className="rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold hover:bg-green-600">
+              Créer
+            </button>
+          </form>
+        </section>
+      )}
 
       {days.map((day) => (
         <section key={day.id} className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
@@ -207,11 +231,11 @@ export default async function AdminPage() {
         </p>
       </section>
 
-      {!season?.bonus_reveles && (
+      {season && !season.bonus_reveles && (
         <section className="rounded-xl border border-amber-900 bg-amber-950/30 p-4">
-          <h2 className="mb-1 font-bold">Bonus cachés</h2>
+          <h2 className="mb-1 font-bold">Bonus cachés · {season.name}</h2>
           <p className="mb-2 text-xs text-neutral-400">
-            Révèle les bonus de tout le monde (irréversible) — à faire après la deadline du 30/09.
+            Révèle les bonus de tout le monde (irréversible) — à faire après la deadline de dépôt.
           </p>
           <form action={revealBonuses}>
             <button className="rounded-lg bg-amber-700 px-3 py-1.5 text-sm font-semibold hover:bg-amber-600">
@@ -220,6 +244,195 @@ export default async function AdminPage() {
           </form>
         </section>
       )}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Saisons : préparer 2026-2027 et les suivantes                      */}
+      {/* ------------------------------------------------------------------ */}
+      <section className="rounded-xl border border-sky-900 bg-sky-950/20 p-4">
+        <h2 className="mb-1 font-bold">📆 Saisons</h2>
+        <p className="mb-3 text-xs text-neutral-400">
+          Prépare la saison suivante pendant que l’actuelle se joue : compose la Ligue 1
+          (promus/relégués), coche les 5 équipes concernées (dont celle tirée au sort et celle
+          choisie par le vainqueur sortant), règle mise et échéances, puis bascule. L’ancienne
+          saison reste consultable en archive depuis le classement.
+        </p>
+
+        <ul className="mb-4 flex flex-col gap-3">
+          {allSeasons.map((s) => {
+            const composition = memberships.filter((m) => m.season_id === s.id);
+            const trackedCount = composition.filter((m) => m.tracked).length;
+            return (
+              <li key={s.id} className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold">
+                    {s.name}{" "}
+                    {s.is_current ? (
+                      <span className="rounded bg-green-900/60 px-1.5 py-0.5 text-[11px] text-green-300">
+                        en cours
+                      </span>
+                    ) : (
+                      <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-[11px] text-neutral-400">
+                        {composition.length} clubs · {trackedCount}/5 ★
+                      </span>
+                    )}
+                  </p>
+                  {!s.is_current && (
+                    <form action={activateSeason}>
+                      <input type="hidden" name="season_id" value={s.id} />
+                      <button className="rounded-lg bg-sky-800 px-3 py-1.5 text-xs font-semibold hover:bg-sky-700">
+                        🔁 Basculer la ligue sur cette saison
+                      </button>
+                    </form>
+                  )}
+                </div>
+
+                {!s.is_current && (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-xs text-neutral-400">
+                      Composer la Ligue 1 de cette saison
+                    </summary>
+                    <form action={saveSeasonTeams} className="mt-2">
+                      <input type="hidden" name="season_id" value={s.id} />
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
+                        {allTeams.map((t) => {
+                          const m = composition.find((c) => c.team_id === t.id);
+                          return (
+                            <div key={t.id} className="flex items-center gap-1.5 text-xs">
+                              <input
+                                type="checkbox"
+                                id={`in_${s.id}_${t.id}`}
+                                name={`in_${t.id}`}
+                                defaultChecked={Boolean(m)}
+                              />
+                              <label htmlFor={`in_${s.id}_${t.id}`} className="flex-1">
+                                {t.short_name}
+                              </label>
+                              <input
+                                type="checkbox"
+                                id={`tracked_${s.id}_${t.id}`}
+                                name={`tracked_${t.id}`}
+                                defaultChecked={Boolean(m?.tracked)}
+                                title="Équipe concernée"
+                              />
+                              <label htmlFor={`tracked_${s.id}_${t.id}`}>★</label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button className="mt-2 rounded-lg bg-neutral-700 px-3 py-1.5 text-xs font-semibold hover:bg-neutral-600">
+                        Enregistrer la composition
+                      </button>
+                      <p className="mt-1 text-[11px] text-neutral-600">
+                        1ʳᵉ case = club en Ligue 1 cette saison-là · ★ = équipe concernée (5 max).
+                      </p>
+                    </form>
+                  </details>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+
+        <details className="mb-3">
+          <summary className="cursor-pointer text-sm font-semibold">
+            ➕ Préparer une nouvelle saison (ex. 2026-2027)
+          </summary>
+          <form action={createSeason} className="mt-2 flex flex-col gap-2">
+            <input
+              name="name"
+              required
+              placeholder="Ligue 1 2026-2027"
+              className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
+            />
+            <div className="flex flex-wrap gap-2 text-sm">
+              <label className="flex items-center gap-1 text-xs text-neutral-400">
+                Mise (€)
+                <input
+                  name="mise"
+                  defaultValue="20"
+                  inputMode="decimal"
+                  className="w-16 rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1.5"
+                />
+              </label>
+              <label className="flex items-center gap-1 text-xs text-neutral-400">
+                Part vainqueur (€)
+                <input
+                  name="part_vainqueur"
+                  defaultValue="15"
+                  inputMode="decimal"
+                  className="w-16 rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1.5"
+                />
+              </label>
+              <label className="flex items-center gap-1 text-xs text-neutral-400">
+                Part Ballon d’Or (€)
+                <input
+                  name="part_ballon_or"
+                  defaultValue="5"
+                  inputMode="decimal"
+                  className="w-16 rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1.5"
+                />
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <label className="flex items-center gap-1 text-xs text-neutral-400">
+                Virement avant le
+                <input
+                  name="paiement_deadline"
+                  type="date"
+                  required
+                  className="rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-sm"
+                />
+              </label>
+              <label className="flex items-center gap-1 text-xs text-neutral-400">
+                Bonus cachés avant le
+                <input
+                  name="bonus_deadline"
+                  type="datetime-local"
+                  required
+                  className="rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-sm"
+                />
+              </label>
+            </div>
+            <button className="self-start rounded-lg bg-sky-800 px-3 py-1.5 text-sm font-semibold hover:bg-sky-700">
+              Créer la saison
+            </button>
+            <p className="text-[11px] text-neutral-600">
+              La composition démarre avec les clubs de la saison en cours (équipes concernées
+              décochées) — ajuste ensuite promus, relégués et ★.
+            </p>
+          </form>
+        </details>
+
+        <details>
+          <summary className="cursor-pointer text-sm font-semibold">
+            ➕ Ajouter un club au référentiel (promu absent de la liste)
+          </summary>
+          <form action={createTeam} className="mt-2 flex flex-col gap-2">
+            <div className="flex gap-2">
+              <input
+                name="short_name"
+                required
+                placeholder="Nom court (ex. ASSE)"
+                className="w-40 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
+              />
+              <input
+                name="full_name"
+                required
+                placeholder="Nom complet (ex. AS Saint-Étienne)"
+                className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
+              />
+            </div>
+            <input
+              name="aliases"
+              placeholder="Alias acceptés par le parseur, séparés par des virgules (ex. SAINT-ETIENNE, SAINTE, LES VERTS)"
+              className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
+            />
+            <button className="self-start rounded-lg bg-neutral-700 px-3 py-1.5 text-sm font-semibold hover:bg-neutral-600">
+              Ajouter le club
+            </button>
+          </form>
+        </details>
+      </section>
     </div>
   );
 }

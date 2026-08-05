@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatKickoff, getSessionProfile } from "@/lib/data";
+import { formatKickoff, getCurrentSeason, getSessionProfile } from "@/lib/data";
 import type { Fixture, Matchday } from "@/lib/types";
 
 const STATUS_LABELS = {
@@ -10,12 +10,16 @@ const STATUS_LABELS = {
 
 export default async function JourneesPage() {
   const { supabase } = await getSessionProfile();
+  const season = await getCurrentSeason(supabase);
 
-  const { data } = await supabase
-    .from("matchdays")
-    .select("*, fixtures(*)")
-    .neq("status", "brouillon")
-    .order("number", { ascending: false });
+  const { data } = season
+    ? await supabase
+        .from("matchdays")
+        .select("*, fixtures(*)")
+        .eq("season_id", season.id)
+        .neq("status", "brouillon")
+        .order("number", { ascending: false })
+    : { data: [] };
 
   const days = (data ?? []) as (Matchday & { fixtures: Fixture[] })[];
 

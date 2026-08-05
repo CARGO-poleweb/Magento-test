@@ -28,6 +28,11 @@ PWA installable sur téléphone. Prévu pour ~20 membres, coût d'hébergement :
   d'anniversaire séchée, etc.).
 - **Rôles** : Président (a toujours raison), Premier Ministre, Président de la Commission,
   Secrétaire, Chargé de mission, membres. 20 membres maximum (article 4), radiation possible.
+- **Multi-saisons** : la ligue se rejoue chaque année. Le Président prépare la saison suivante
+  (2026-2027…) depuis son espace — composition de la Ligue 1 (promus/relégués, ajout de clubs au
+  référentiel avec leurs alias), choix des 5 équipes concernées ★, mise et échéances — puis
+  bascule la ligue dessus. Les saisons passées restent consultables en archive depuis le
+  classement ; bonus cachés, cagnotte et sanctions sont cloisonnés par saison.
 
 ## Installation (une fois, ~20 minutes)
 

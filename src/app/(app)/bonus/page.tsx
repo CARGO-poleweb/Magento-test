@@ -1,5 +1,5 @@
 import { BonusForm } from "@/components/BonusForm";
-import { getSessionProfile } from "@/lib/data";
+import { getCurrentSeason, getSessionProfile } from "@/lib/data";
 import type { BonusType, HiddenBonus, Profile } from "@/lib/types";
 
 const BONUSES: {
@@ -43,9 +43,11 @@ const deadlineFmt = new Intl.DateTimeFormat("fr-FR", {
 export default async function BonusPage() {
   const { supabase, profile } = await getSessionProfile();
 
-  const [{ data: season }, { data: bonuses }, { data: profiles }] = await Promise.all([
-    supabase.from("season_settings").select("*").eq("id", 1).single(),
-    supabase.from("hidden_bonuses").select("*"),
+  const season = await getCurrentSeason(supabase);
+  const [{ data: bonuses }, { data: profiles }] = await Promise.all([
+    season
+      ? supabase.from("hidden_bonuses").select("*").eq("season_id", season.id)
+      : Promise.resolve({ data: [] }),
     supabase.from("profiles").select("*"),
   ]);
 
@@ -62,11 +64,12 @@ export default async function BonusPage() {
       <header>
         <h1 className="text-xl font-bold">Bonus cachés</h1>
         <p className="text-xs text-neutral-500">
+          {season ? `${season.name} · ` : ""}
           {revealed
             ? "Les bonus ont été révélés par le Président."
             : deadline
               ? `À sceller avant le ${deadlineFmt.format(deadline)} (heure de Paris). Personne ne voit tes choix — pas même le Président (article 5 : les siens vont au Premier Ministre).`
-              : "Saison non configurée."}
+              : "Aucune saison en cours."}
         </p>
       </header>
 

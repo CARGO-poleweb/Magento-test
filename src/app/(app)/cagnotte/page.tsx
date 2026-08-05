@@ -1,5 +1,5 @@
 import { addAmende, recordMise } from "@/app/actions";
-import { formatEuros, getSessionProfile } from "@/lib/data";
+import { formatEuros, getCurrentSeason, getSessionProfile } from "@/lib/data";
 import type { LedgerEntry, Profile } from "@/lib/types";
 
 const dateFmt = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", dateStyle: "medium" });
@@ -7,10 +7,16 @@ const dateFmt = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", dat
 export default async function CagnottePage() {
   const { supabase, profile } = await getSessionProfile();
 
-  const [{ data: season }, { data: profiles }, { data: ledger }] = await Promise.all([
-    supabase.from("season_settings").select("*").eq("id", 1).single(),
+  const season = await getCurrentSeason(supabase);
+  const [{ data: profiles }, { data: ledger }] = await Promise.all([
     supabase.from("profiles").select("*").order("display_name"),
-    supabase.from("ledger").select("*").order("created_at", { ascending: false }),
+    season
+      ? supabase
+          .from("ledger")
+          .select("*")
+          .eq("season_id", season.id)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
   ]);
 
   const members = ((profiles ?? []) as Profile[]).filter((m) => !m.is_radie);
@@ -28,12 +34,14 @@ export default async function CagnottePage() {
   return (
     <div className="flex flex-col gap-5">
       <header>
-        <h1 className="text-xl font-bold">Cagnotte</h1>
+        <h1 className="text-xl font-bold">
+          Cagnotte{season && <span className="text-sm font-normal text-neutral-500"> · {season.name}</span>}
+        </h1>
         <p className="text-xs text-neutral-500">
           Article 2 : mise de {formatEuros(season?.mise_cents ?? 2000)} — article 3 : virement au
           Président avant le{" "}
-          {season ? dateFmt.format(new Date(season.paiement_deadline)) : "30/09/2025"}, sous peine
-          de radiation. Les paiements se font hors app (virement) ; ici on tient le registre.
+          {season ? dateFmt.format(new Date(season.paiement_deadline)) : "(saison à créer)"}, sous
+          peine de radiation. Les paiements se font hors app (virement) ; ici on tient le registre.
         </p>
       </header>
 

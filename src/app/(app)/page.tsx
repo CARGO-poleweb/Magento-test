@@ -1,25 +1,59 @@
 import Link from "next/link";
 import { getSessionProfile } from "@/lib/data";
 import { standings } from "@/lib/scoring";
-import type { Fixture, Matchday, PointAdjustment, Prediction, Profile } from "@/lib/types";
+import type {
+  Fixture,
+  Matchday,
+  PointAdjustment,
+  Prediction,
+  Profile,
+  Season,
+} from "@/lib/types";
 
-export default async function ClassementPage() {
+export default async function ClassementPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ saison?: string }>;
+}) {
+  const { saison } = await searchParams;
   const { supabase, profile } = await getSessionProfile();
 
-  const [{ data: profiles }, { data: matchdays }, { data: predictions }, { data: adjustments }] =
-    await Promise.all([
-      supabase.from("profiles").select("*").order("display_name"),
-      supabase
-        .from("matchdays")
-        .select("*, fixtures(*)")
-        .neq("status", "brouillon")
-        .order("number"),
-      supabase.from("predictions").select("*"),
-      supabase.from("point_adjustments").select("*"),
-    ]);
+  const { data: seasonsData } = await supabase
+    .from("seasons")
+    .select("*")
+    .order("created_at", { ascending: false });
+  const seasons = (seasonsData ?? []) as Season[];
+  const currentSeason = seasons.find((s) => s.is_current) ?? null;
+  const viewedSeason =
+    (saison && seasons.find((s) => s.id === Number(saison))) || currentSeason || seasons[0];
+
+  if (!viewedSeason) {
+    return (
+      <p className="rounded-xl border border-neutral-800 p-4 text-sm text-neutral-500">
+        Aucune saison configurée — le Président doit en créer une.
+      </p>
+    );
+  }
+
+  const [{ data: profiles }, { data: matchdays }, { data: adjustments }] = await Promise.all([
+    supabase.from("profiles").select("*").order("display_name"),
+    supabase
+      .from("matchdays")
+      .select("*, fixtures(*)")
+      .eq("season_id", viewedSeason.id)
+      .neq("status", "brouillon")
+      .order("number"),
+    supabase.from("point_adjustments").select("*").eq("season_id", viewedSeason.id),
+  ]);
+
+  const days = (matchdays ?? []) as (Matchday & { fixtures: Fixture[] })[];
+  const fixtureIds = days.flatMap((d) => d.fixtures.map((f) => f.id));
+  const { data: predictions } =
+    fixtureIds.length > 0
+      ? await supabase.from("predictions").select("*").in("fixture_id", fixtureIds)
+      : { data: [] as Prediction[] };
 
   const members = (profiles ?? []) as Profile[];
-  const days = (matchdays ?? []) as (Matchday & { fixtures: Fixture[] })[];
   const preds = (predictions ?? []) as Prediction[];
 
   const predictionsByMember = new Map<string, Prediction[]>();
@@ -38,13 +72,39 @@ export default async function ClassementPage() {
 
   const byId = new Map(members.map((m) => [m.id, m]));
   const medals = ["🥇", "🥈", "🥉"];
+  const isArchive = !viewedSeason.is_current;
 
-  const nextDay = days
-    .filter((d) => d.status === "publiee")
-    .sort((a, b) => a.number - b.number)[0];
+  const nextDay = isArchive
+    ? undefined
+    : days.filter((d) => d.status === "publiee").sort((a, b) => a.number - b.number)[0];
 
   return (
     <div className="flex flex-col gap-6">
+      {seasons.length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          {seasons.map((s) => (
+            <Link
+              key={s.id}
+              href={s.is_current ? "/" : `/?saison=${s.id}`}
+              className={`rounded-full border px-3 py-1 text-xs ${
+                s.id === viewedSeason.id
+                  ? "border-green-700 bg-green-950/60 text-green-300"
+                  : "border-neutral-700 text-neutral-400 hover:text-neutral-200"
+              }`}
+            >
+              {s.name}
+              {s.is_current && " · en cours"}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {isArchive && (
+        <p className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-3 text-xs text-neutral-400">
+          📜 Archive : classement final de la saison {viewedSeason.name}.
+        </p>
+      )}
+
       {nextDay && (
         <Link
           href={`/journees/${nextDay.number}`}
@@ -56,7 +116,9 @@ export default async function ClassementPage() {
       )}
 
       <section>
-        <h1 className="mb-3 text-xl font-bold">Classement général</h1>
+        <h1 className="mb-3 text-xl font-bold">
+          Classement général <span className="text-sm font-normal text-neutral-500">· {viewedSeason.name}</span>
+        </h1>
         <div className="overflow-hidden rounded-xl border border-neutral-800">
           <table className="w-full text-sm">
             <thead className="bg-neutral-900 text-left text-xs uppercase text-neutral-500">

@@ -1,4 +1,4 @@
--- La Ligue des Copains — schéma de base
+-- La Ligue des Copains — schéma de base (multi-saisons)
 -- À exécuter dans l'éditeur SQL de Supabase (ou via `supabase db push`).
 
 create type member_role as enum (
@@ -32,7 +32,8 @@ create type bonus_type as enum (
 create type ledger_type as enum ('mise', 'amende', 'ajustement');
 
 -- ---------------------------------------------------------------------------
--- Profils (1 ligne par membre, créée automatiquement à l'inscription)
+-- Profils (1 ligne par membre, créée automatiquement à l'inscription ;
+-- les profils traversent les saisons)
 -- ---------------------------------------------------------------------------
 create table profiles (
   id uuid primary key references auth.users (id) on delete cascade,
@@ -69,28 +70,42 @@ create trigger on_auth_user_created after insert on auth.users
   for each row execute function handle_new_user();
 
 -- ---------------------------------------------------------------------------
--- Paramètres de saison (une seule ligne)
+-- Saisons : la ligue se rejoue chaque année (2025-26, 2026-27, …).
+-- Une seule saison « courante » à la fois ; les autres sont en préparation
+-- ou archivées (leur classement reste consultable).
 -- ---------------------------------------------------------------------------
-create table season_settings (
-  id int primary key default 1 check (id = 1),
-  name text not null default 'Ligue 1 2025-2026',
+create table seasons (
+  id serial primary key,
+  name text not null unique,                       -- « Ligue 1 2025-2026 »
   mise_cents int not null default 2000,            -- art. 2 : 20 €
   part_vainqueur_cents int not null default 1500,  -- 15 € × candidats
   part_ballon_or_cents int not null default 500,   -- 5 € pour le Ballon d'Or
-  paiement_deadline date not null default '2025-09-30',            -- art. 3
-  bonus_deadline timestamptz not null default '2025-09-30 23:59:59+02', -- barème bonus cachés
-  bonus_reveles boolean not null default false
+  paiement_deadline date not null,                 -- art. 3
+  bonus_deadline timestamptz not null,             -- dépôt des bonus cachés
+  bonus_reveles boolean not null default false,
+  is_current boolean not null default false,
+  created_at timestamptz not null default now()
 );
 
+create unique index seasons_single_current on seasons ((true)) where is_current;
+
 -- ---------------------------------------------------------------------------
--- Équipes (18 clubs de Ligue 1 + alias pour le parseur)
+-- Équipes : le référentiel des clubs traverse les saisons ; la composition
+-- de la Ligue 1 (18 clubs, promus/relégués) et les 5 « équipes concernées »
+-- se règlent saison par saison dans season_teams.
 -- ---------------------------------------------------------------------------
 create table teams (
   id serial primary key,
   short_name text not null unique,   -- écriture canonique attendue (art. 7)
   full_name text not null,
-  aliases text[] not null default '{}',
-  tracked boolean not null default false -- les 5 équipes concernées
+  aliases text[] not null default '{}'
+);
+
+create table season_teams (
+  season_id int not null references seasons (id) on delete cascade,
+  team_id int not null references teams (id) on delete cascade,
+  tracked boolean not null default false, -- équipe concernée cette saison-là
+  primary key (season_id, team_id)
 );
 
 -- ---------------------------------------------------------------------------
@@ -98,10 +113,12 @@ create table teams (
 -- ---------------------------------------------------------------------------
 create table matchdays (
   id serial primary key,
-  number int not null unique,
+  season_id int not null references seasons (id) on delete cascade,
+  number int not null,
   type matchday_type not null default 'classique',
   status matchday_status not null default 'brouillon', -- art. 10 : pas jouable avant diffusion
-  published_at timestamptz
+  published_at timestamptz,
+  unique (season_id, number)
 );
 
 create table fixtures (
@@ -139,23 +156,25 @@ create table predictions (
 create index predictions_fixture_member on predictions (fixture_id, member_id, created_at);
 
 -- ---------------------------------------------------------------------------
--- Bonus cachés : scellés jusqu'à la révélation par le Président.
+-- Bonus cachés : scellés jusqu'à la révélation, par saison.
 -- ---------------------------------------------------------------------------
 create table hidden_bonuses (
   id uuid primary key default gen_random_uuid(),
+  season_id int not null references seasons (id) on delete cascade,
   member_id uuid not null references profiles (id) on delete cascade,
   type bonus_type not null,
   answer jsonb not null,             -- {"value": "PSG"} ou {"values": ["A","B","C"]} (ordonné)
   points_awarded int,                -- attribué en fin de saison par le Président
   submitted_at timestamptz not null default now(),
-  unique (member_id, type)
+  unique (season_id, member_id, type)
 );
 
 -- ---------------------------------------------------------------------------
--- Trésorerie (art. 2 & 3) : registre, pas de paiement réel dans l'app.
+-- Trésorerie (art. 2 & 3) : registre par saison, pas de paiement réel.
 -- ---------------------------------------------------------------------------
 create table ledger (
   id uuid primary key default gen_random_uuid(),
+  season_id int not null references seasons (id) on delete cascade,
   member_id uuid not null references profiles (id) on delete cascade,
   type ledger_type not null,
   amount_cents int not null,
@@ -169,6 +188,7 @@ create table ledger (
 -- ---------------------------------------------------------------------------
 create table point_adjustments (
   id uuid primary key default gen_random_uuid(),
+  season_id int not null references seasons (id) on delete cascade,
   member_id uuid not null references profiles (id) on delete cascade,
   matchday_id int references matchdays (id) on delete set null,
   points int not null,
@@ -183,8 +203,9 @@ create table point_adjustments (
 -- supprimer un pronostic, même pas le Président (art. 12).
 -- ---------------------------------------------------------------------------
 alter table profiles enable row level security;
-alter table season_settings enable row level security;
+alter table seasons enable row level security;
 alter table teams enable row level security;
+alter table season_teams enable row level security;
 alter table matchdays enable row level security;
 alter table fixtures enable row level security;
 alter table predictions enable row level security;
@@ -195,11 +216,14 @@ alter table point_adjustments enable row level security;
 create policy "profils visibles de tous les membres"
   on profiles for select to authenticated using (true);
 
-create policy "saison visible"
-  on season_settings for select to authenticated using (true);
+create policy "saisons visibles"
+  on seasons for select to authenticated using (true);
 
 create policy "équipes visibles"
   on teams for select to authenticated using (true);
+
+create policy "composition des saisons visible"
+  on season_teams for select to authenticated using (true);
 
 -- Art. 10 : une journée en brouillon n'existe pas pour les membres.
 create policy "journées publiées visibles"
@@ -224,12 +248,13 @@ create policy "matchs des journées publiées visibles"
 create policy "pronostics visibles de tous"
   on predictions for select to authenticated using (true);
 
--- Bonus cachés : chacun voit les siens ; tout le monde voit tout après révélation.
+-- Bonus cachés : chacun voit les siens ; tout le monde voit tout une fois la
+-- saison révélée.
 create policy "bonus cachés scellés"
   on hidden_bonuses for select to authenticated
   using (
     member_id = auth.uid()
-    or (select bonus_reveles from season_settings where id = 1)
+    or (select bonus_reveles from seasons s where s.id = season_id)
   );
 
 create policy "registre visible"

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { addAdjustment, decidePrediction } from "@/app/actions";
-import { canJudge, getSessionProfile } from "@/lib/data";
+import { canJudge, getCurrentSeason, getSessionProfile } from "@/lib/data";
 import type { Matchday, PointAdjustment, Profile } from "@/lib/types";
 
 type PredictionRow = {
@@ -34,6 +34,7 @@ const dateFmt = new Intl.DateTimeFormat("fr-FR", {
 export default async function CommissionPage() {
   const { supabase, profile } = await getSessionProfile();
   if (!canJudge(profile.role)) redirect("/");
+  const season = await getCurrentSeason(supabase);
 
   const [{ data: pending }, { data: decided }, { data: profiles }, { data: matchdays }, { data: adjustments }] =
     await Promise.all([
@@ -49,12 +50,22 @@ export default async function CommissionPage() {
         .order("decided_at", { ascending: false })
         .limit(15),
       supabase.from("profiles").select("*").order("display_name"),
-      supabase.from("matchdays").select("*").neq("status", "brouillon").order("number"),
-      supabase
-        .from("point_adjustments")
-        .select("*, member:member_id(display_name)")
-        .order("created_at", { ascending: false })
-        .limit(20),
+      season
+        ? supabase
+            .from("matchdays")
+            .select("*")
+            .eq("season_id", season.id)
+            .neq("status", "brouillon")
+            .order("number")
+        : Promise.resolve({ data: [] }),
+      season
+        ? supabase
+            .from("point_adjustments")
+            .select("*, member:member_id(display_name)")
+            .eq("season_id", season.id)
+            .order("created_at", { ascending: false })
+            .limit(20)
+        : Promise.resolve({ data: [] }),
     ]);
 
   const pendingRows = (pending ?? []) as unknown as PredictionRow[];
