@@ -25,9 +25,9 @@ et suivi des cartons.
 
 | Règle | Fonctionnalité |
 |---|---|
-| Art. 6 — Pari 30 min avant le match, premier pari accepté, doublon = carton jaune | **Verrouillage automatique à H-30** par match ; l'interface empêche physiquement le doublon (plus de sanction possible → à décider : garder la règle pour le folklore ou la retirer) |
-| Art. 7 — Pronostic mal orthographié ou ambigu non comptabilisé (« Monacu », « Paris ») | **Saisie structurée** : on choisit l'équipe dans une liste et le score avec un sélecteur — l'ambiguïté disparaît par construction |
-| Art. 8 — Format strict `TFC 3-0 OM` ou `TFC 3/0 OM` | Idem : le format n'est plus un sujet, l'app génère l'écriture canonique |
+| Art. 6 — Pari 30 min avant le match, premier pari accepté, doublon = carton jaune | **Verrouillage automatique à H-30** par match ; un doublon est accepté mais **signalé à la Commission** (premier pari retenu, carton jaune applicable) |
+| Art. 7 — Pronostic mal orthographié ou ambigu non comptabilisé (« Monacu », « Paris ») | **Saisie libre assumée** : on tape son pronostic tel quel, sans correction ni suggestion. L'app l'interprète en coulisse ; si c'est fautif ou ambigu, elle n'empêche rien — elle **ouvre un signalement pour la Commission**, qui tranche comme aujourd'hui |
+| Art. 8 — Format strict `TFC 3-0 OM` ou `TFC 3/0 OM` | Le texte brut horodaté fait foi ; un format non conforme est accepté mais marqué « non comptabilisable » en attente de décision de la Commission |
 | Art. 9 — Parier en une fois ou match par match | Bulletin de journée enregistrable partiellement, chaque match se verrouille indépendamment |
 | Art. 10 — Jouer dans l'ordre de la programmation, pas avant diffusion par le Président | La journée n'est **pronosticable qu'après publication** par le Président ; l'ordre est imposé par l'interface |
 | Art. 11 — Un seul support officiel | L'app devient ce support ; WhatsApp reste pour la déconne |
@@ -142,8 +142,9 @@ palmarès et statistiques de saison · page « Ballon d'Or ».
 
 ## 4. Points à trancher avec le Bureau
 
-1. **Doublons et formats** : l'app rend impossibles les fautes des articles 6 (doublon), 7 et 8
-   (format) — on supprime ces sanctions ou on garde un « mode folklore » ?
+1. **Saisie libre confirmée** : les fautes des articles 6, 7 et 8 restent possibles — l'app
+   enregistre le texte brut sans correction, détecte les anomalies et les transmet à la
+   Commission au lieu de les bloquer. Le folklore (cartons pour « Monacu ») est préservé.
 2. **Résultats** : saisie par le Président (MVP) vous convient-elle en attendant l'API ?
 3. **Vidéos** : limite de taille/durée (proposition : 2 min / 200 Mo, compression automatique).
 4. **WhatsApp** : reste le canal de discussion, l'app devient le seul support officiel (art. 11) —
