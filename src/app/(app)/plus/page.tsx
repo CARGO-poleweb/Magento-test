@@ -112,6 +112,9 @@ export default async function PlusPage() {
       <p className="text-xs leading-relaxed text-faint">
         Connecté en tant que <span className="text-muted">{profile.display_name}</span>. La session
         reste active tant que tu ne te déconnectes pas.
+        <span className="mt-1 block font-mono text-[10px] text-faint/70">
+          version {process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "locale"}
+        </span>
       </p>
 
       <form action={signOut}>
