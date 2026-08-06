@@ -58,7 +58,7 @@
   color-scheme: light;
   /* Hauteur de la barre d'onglets : sert à caler tout ce qui doit vivre
      juste au-dessus (barre de saisie du Vestiaire, fin de page). */
-  --nav-safe: max(calc(env(safe-area-inset-bottom) * 0.5), 8px);
+  --nav-safe: max(calc(env(safe-area-inset-bottom) - 20px), 8px);
   --nav-h: calc(52px + var(--nav-safe));
 }
 
