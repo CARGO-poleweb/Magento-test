@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { matchTeam, parsePrediction } from "@/lib/parser";
+import { looksLikePrediction, matchTeam, parsePrediction } from "@/lib/parser";
 import { canJudge, getCurrentSeason, getSessionProfile } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { isFixtureLocked, type BonusType, type Team } from "@/lib/types";
+import { isFixtureLocked, REACTION_EMOJIS, type BonusType, type Team } from "@/lib/types";
 
 export type ActionResult = {
   ok: boolean;
@@ -161,6 +161,94 @@ export async function submitHiddenBonus(
     title: "Bonus scellé 🔒",
     detail: "Personne ne le verra avant la révélation. Modifiable jusqu'à la deadline.",
   };
+}
+
+// ---------------------------------------------------------------------------
+// Le Vestiaire (chat de la ligue)
+// ---------------------------------------------------------------------------
+const MAX_MESSAGE_LENGTH = 2000;
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+
+export async function sendMessage(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { profile } = await getSessionProfile();
+  if (profile.is_radie) return { ok: false, title: "Radié du groupe (article 3)" };
+
+  const content = String(formData.get("content") ?? "").trim();
+  const photo = formData.get("photo");
+  const hasPhoto = photo instanceof File && photo.size > 0;
+
+  if (!content && !hasPhoto) return { ok: false, title: "Message vide" };
+  if (content.length > MAX_MESSAGE_LENGTH) return { ok: false, title: "Message trop long" };
+
+  const service = createServiceClient();
+
+  let imageUrl: string | null = null;
+  if (hasPhoto) {
+    if (!photo.type.startsWith("image/")) {
+      return { ok: false, title: "Photos uniquement", detail: "Les vidéos arrivent avec les Défis." };
+    }
+    if (photo.size > MAX_PHOTO_BYTES) {
+      return { ok: false, title: "Photo trop lourde", detail: "8 Mo maximum." };
+    }
+    const ext = (photo.name.split(".").pop() || "jpg").toLowerCase().slice(0, 5);
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const { error } = await service.storage
+      .from("vestiaire")
+      .upload(path, await photo.arrayBuffer(), { contentType: photo.type });
+    if (error) return { ok: false, title: "Échec de l'envoi de la photo", detail: error.message };
+    imageUrl = service.storage.from("vestiaire").getPublicUrl(path).data.publicUrl;
+  }
+
+  const { error } = await service.from("messages").insert({
+    member_id: profile.id,
+    content: content || null,
+    image_url: imageUrl,
+    looks_like_prediction: content ? looksLikePrediction(content) : false,
+  });
+  if (error) return { ok: false, title: "Message non envoyé", detail: error.message };
+
+  return { ok: true, title: "envoyé" };
+}
+
+export async function toggleReaction(formData: FormData): Promise<void> {
+  const { profile } = await getSessionProfile();
+  const messageId = String(formData.get("message_id"));
+  const emoji = String(formData.get("emoji"));
+  if (!messageId || !(REACTION_EMOJIS as readonly string[]).includes(emoji)) return;
+
+  const service = createServiceClient();
+  const { data: existing } = await service
+    .from("message_reactions")
+    .select("emoji")
+    .eq("message_id", messageId)
+    .eq("member_id", profile.id)
+    .eq("emoji", emoji)
+    .maybeSingle();
+
+  if (existing) {
+    await service
+      .from("message_reactions")
+      .delete()
+      .eq("message_id", messageId)
+      .eq("member_id", profile.id)
+      .eq("emoji", emoji);
+  } else {
+    await service
+      .from("message_reactions")
+      .insert({ message_id: messageId, member_id: profile.id, emoji });
+  }
+}
+
+/** Marque le Vestiaire comme lu (pastille de non-lus). */
+export async function markChatRead(): Promise<void> {
+  const { profile } = await getSessionProfile();
+  const service = createServiceClient();
+  await service
+    .from("chat_reads")
+    .upsert({ member_id: profile.id, last_read_at: new Date().toISOString() });
 }
 
 // ---------------------------------------------------------------------------

@@ -5,8 +5,8 @@ import { signOut } from "@/app/actions";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { supabase, profile } = await getSessionProfile();
 
-  // Pastille sur « Plus » : les juges voient d'un coup d'œil, depuis n'importe
-  // quel écran, que des dossiers attendent la Commission.
+  // Pastilles : messages non lus au Vestiaire pour tous, dossiers en attente
+  // pour les juges — visibles depuis n'importe quel écran.
   let plusBadge = 0;
   if (canJudge(profile.role)) {
     const { count } = await supabase
@@ -16,12 +16,25 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     plusBadge = count ?? 0;
   }
 
-  // Navigation resserrée : 3 onglets aujourd'hui, 5 max à terme (le Vestiaire
-  // et les Défis prendront les places libres en V1). Tout le reste vit dans
+  const { data: read } = await supabase
+    .from("chat_reads")
+    .select("last_read_at")
+    .eq("member_id", profile.id)
+    .maybeSingle();
+  let unreadQuery = supabase
+    .from("messages")
+    .select("id", { count: "exact", head: true })
+    .neq("member_id", profile.id);
+  if (read?.last_read_at) unreadQuery = unreadQuery.gt("created_at", read.last_read_at);
+  const { count: unread } = await unreadQuery;
+
+  // Navigation resserrée : 4 onglets aujourd'hui, 5 max à terme (les Défis
+  // photos/vidéos prendront la place libre en V1). Tout le reste vit dans
   // « Plus » pour que la barre reste lisible sur mobile.
   const tabs = [
     { href: "/", label: "Accueil", icon: "🏆", badge: 0 },
     { href: "/journees", label: "Journées", icon: "📅", badge: 0 },
+    { href: "/vestiaire", label: "Vestiaire", icon: "💬", badge: unread ?? 0 },
     { href: "/plus", label: "Plus", icon: "⋯", badge: plusBadge },
   ];
 

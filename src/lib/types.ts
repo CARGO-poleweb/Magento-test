@@ -113,6 +113,24 @@ export type PointAdjustment = {
   created_at: string;
 };
 
+export type Message = {
+  id: string;
+  member_id: string;
+  content: string | null;
+  image_url: string | null;
+  looks_like_prediction: boolean;
+  created_at: string;
+};
+
+export type MessageReaction = {
+  message_id: string;
+  member_id: string;
+  emoji: string;
+};
+
+/** Les seules réactions du Vestiaire — dont le carton jaune réglementaire. */
+export const REACTION_EMOJIS = ["😂", "🔥", "👍", "🟨"] as const;
+
 /** Délai de verrouillage avant coup d'envoi (article 6). */
 export const LOCK_MINUTES = 30;
 

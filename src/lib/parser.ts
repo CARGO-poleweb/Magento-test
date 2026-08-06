@@ -95,6 +95,15 @@ export function matchTeam(token: string, teams: Team[]): TeamMatch {
 }
 
 /**
+ * Détecte si un message du Vestiaire ressemble à un pronostic (article 11 :
+ * un seul support officiel — l'app rappelle alors que ça ne compte pas ici).
+ * Volontairement laxiste : mieux vaut un rappel de trop qu'un prono perdu.
+ */
+export function looksLikePrediction(text: string): boolean {
+  return /^.+\s\d{1,2}\s*[-/]\s*\d{1,2}\s.+/.test(normalize(text));
+}
+
+/**
  * Interprète un pronostic pour un match donné (domicile/extérieur connus).
  * `teams` : toutes les équipes de la ligue (pour détecter « mauvais match »).
  */

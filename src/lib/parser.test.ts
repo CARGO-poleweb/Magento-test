@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePrediction } from "./parser";
+import { looksLikePrediction, parsePrediction } from "./parser";
 import type { Team } from "./types";
 
 const team = (id: number, short: string, aliases: string[] = [], full = short): Team => ({
@@ -93,5 +93,18 @@ describe("cohérence avec le match", () => {
   it("signale un pronostic vide", () => {
     const r = parsePrediction("   ", { home: TFC, away: OM }, TEAMS);
     expect(r.status).toBe("a_examiner");
+  });
+});
+
+describe("détection de pronostic dans le Vestiaire (article 11)", () => {
+  it("repère un prono posté dans le chat", () => {
+    expect(looksLikePrediction("PSG 4-0 LENS ce soir je le sens bien")).toBe(true);
+    expect(looksLikePrediction("tfc 2/1 om")).toBe(true);
+  });
+
+  it("laisse passer la conversation normale", () => {
+    expect(looksLikePrediction("on mange à 20h30 avant le match ?")).toBe(false);
+    expect(looksLikePrediction("grosse soirée hier 😂")).toBe(false);
+    expect(looksLikePrediction("")).toBe(false);
   });
 });

@@ -198,6 +198,52 @@ create table point_adjustments (
 );
 
 -- ---------------------------------------------------------------------------
+-- Le Vestiaire : le chat de la ligue (messages, photos, réactions).
+-- Permanent — il traverse les saisons, comme le groupe WhatsApp qu'il
+-- remplace. Les pronostics, eux, se font dans les journées (article 11) :
+-- un message qui ressemble à un pronostic est marqué pour que l'app le
+-- rappelle gentiment.
+-- ---------------------------------------------------------------------------
+create table messages (
+  id uuid primary key default gen_random_uuid(),
+  member_id uuid not null references profiles (id) on delete cascade,
+  content text,
+  image_url text,
+  looks_like_prediction boolean not null default false,
+  created_at timestamptz not null default now(),
+  check (content is not null or image_url is not null)
+);
+
+create index messages_created_at on messages (created_at);
+
+create table message_reactions (
+  message_id uuid not null references messages (id) on delete cascade,
+  member_id uuid not null references profiles (id) on delete cascade,
+  emoji text not null,
+  created_at timestamptz not null default now(),
+  primary key (message_id, member_id, emoji)
+);
+
+-- Nécessaire pour que les suppressions de réactions arrivent en temps réel.
+alter table message_reactions replica identity full;
+
+-- Marqueur de lecture (pastille de non-lus).
+create table chat_reads (
+  member_id uuid primary key references profiles (id) on delete cascade,
+  last_read_at timestamptz not null default now()
+);
+
+-- Diffusion temps réel du Vestiaire.
+alter publication supabase_realtime add table messages;
+alter publication supabase_realtime add table message_reactions;
+
+-- Photos du Vestiaire : bucket public (URLs non devinables, noms aléatoires),
+-- écritures via la clé service uniquement.
+insert into storage.buckets (id, name, public)
+values ('vestiaire', 'vestiaire', true)
+on conflict (id) do nothing;
+
+-- ---------------------------------------------------------------------------
 -- RLS : lecture pour les membres authentifiés, écritures uniquement via les
 -- server actions de l'app (clé service role). Personne ne peut modifier ou
 -- supprimer un pronostic, même pas le Président (art. 12).
@@ -212,6 +258,9 @@ alter table predictions enable row level security;
 alter table hidden_bonuses enable row level security;
 alter table ledger enable row level security;
 alter table point_adjustments enable row level security;
+alter table messages enable row level security;
+alter table message_reactions enable row level security;
+alter table chat_reads enable row level security;
 
 create policy "profils visibles de tous les membres"
   on profiles for select to authenticated using (true);
@@ -262,3 +311,12 @@ create policy "registre visible"
 
 create policy "ajustements visibles"
   on point_adjustments for select to authenticated using (true);
+
+create policy "vestiaire visible de tous les membres"
+  on messages for select to authenticated using (true);
+
+create policy "réactions visibles"
+  on message_reactions for select to authenticated using (true);
+
+create policy "marqueur de lecture personnel"
+  on chat_reads for select to authenticated using (member_id = auth.uid());

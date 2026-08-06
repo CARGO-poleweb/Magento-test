@@ -159,7 +159,32 @@ export default async function ClassementPage({
       });
     }
 
-    // 3. Commission : les juges voient ce qui les attend.
+    // 3. Vestiaire : messages non lus.
+    const { data: read } = await supabase
+      .from("chat_reads")
+      .select("last_read_at")
+      .eq("member_id", profile.id)
+      .maybeSingle();
+    let unreadQuery = supabase
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .neq("member_id", profile.id);
+    if (read?.last_read_at) unreadQuery = unreadQuery.gt("created_at", read.last_read_at);
+    const { count: unread } = await unreadQuery;
+    if ((unread ?? 0) > 0) {
+      cards.push({
+        href: "/vestiaire",
+        tone: "neutral",
+        text: (
+          <>
+            💬 <b>{unread} nouveau{(unread ?? 0) > 1 ? "x" : ""} message{(unread ?? 0) > 1 ? "s" : ""}</b>{" "}
+            au Vestiaire →
+          </>
+        ),
+      });
+    }
+
+    // 4. Commission : les juges voient ce qui les attend.
     if (canJudge(profile.role)) {
       const { count } = await supabase
         .from("predictions")
