@@ -983,7 +983,7 @@ export async function saveSeasonTeams(formData: FormData): Promise<void> {
 
   const service = createServiceClient();
   const { data: season } = await service.from("seasons").select("*").eq("id", seasonId).single();
-  if (!season || season.is_current) return; // la composition se fige à la bascule
+  if (!season) return;
 
   const { data: allTeams } = await service.from("teams").select("id");
   const rows = (allTeams ?? [])
@@ -993,6 +993,27 @@ export async function saveSeasonTeams(formData: FormData): Promise<void> {
       team_id: t.id,
       tracked: formData.get(`tracked_${t.id}`) === "on",
     }));
+
+  // Une équipe déjà programmée dans une journée ne peut pas quitter la
+  // composition : on la conserve pour ne pas orpheliner ses matchs.
+  const { data: days } = await service.from("matchdays").select("id").eq("season_id", seasonId);
+  const dayIds = (days ?? []).map((d) => d.id);
+  const engaged = new Set<number>();
+  if (dayIds.length > 0) {
+    const { data: fixtures } = await service
+      .from("fixtures")
+      .select("home_team_id, away_team_id")
+      .in("matchday_id", dayIds);
+    for (const f of fixtures ?? []) {
+      engaged.add(f.home_team_id as number);
+      engaged.add(f.away_team_id as number);
+    }
+  }
+  for (const teamId of engaged) {
+    if (!rows.some((r) => r.team_id === teamId)) {
+      rows.push({ season_id: seasonId, team_id: teamId, tracked: false });
+    }
+  }
 
   await service.from("season_teams").delete().eq("season_id", seasonId);
   if (rows.length > 0) await service.from("season_teams").insert(rows);
