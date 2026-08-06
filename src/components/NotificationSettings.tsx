@@ -13,7 +13,14 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 }
 
-type Status = "loading" | "unsupported" | "ios_not_installed" | "off" | "denied" | "on";
+type Status =
+  | "loading"
+  | "not_configured"
+  | "unsupported"
+  | "ios_not_installed"
+  | "off"
+  | "denied"
+  | "on";
 
 export function NotificationSettings({
   vapidPublicKey,
@@ -30,7 +37,13 @@ export function NotificationSettings({
 
   useEffect(() => {
     async function detect() {
-      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !vapidPublicKey) {
+      // Ordre important : sans clés, ce n'est pas le navigateur qui est en
+      // cause mais la configuration — le dire franchement.
+      if (!vapidPublicKey) {
+        setStatus("not_configured");
+        return;
+      }
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
         const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
         const installed = window.matchMedia("(display-mode: standalone)").matches;
         setStatus(isIos && !installed ? "ios_not_installed" : "unsupported");
@@ -98,10 +111,15 @@ export function NotificationSettings({
             puis reviens ici activer les notifications.
           </p>
         )}
-        {status === "unsupported" && (
-          <p className="text-xs text-faint">
-            Notifications indisponibles sur ce navigateur{!vapidPublicKey && " (clés VAPID non configurées)"}.
+        {status === "not_configured" && (
+          <p className="rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn">
+            Notifications pas encore activées pour la ligue : il manque les clés VAPID côté
+            serveur. C’est au Président de les ajouter une fois pour toutes (voir le README) — ton
+            téléphone, lui, n’y est pour rien.
           </p>
+        )}
+        {status === "unsupported" && (
+          <p className="text-xs text-faint">Notifications indisponibles sur ce navigateur.</p>
         )}
         {status === "denied" && (
           <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">
