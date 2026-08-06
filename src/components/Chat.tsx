@@ -133,7 +133,7 @@ export function Chat({
     <div className="flex h-full flex-col gap-3">
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
         {messages.length === 0 && (
-          <p className="rounded-xl border border-neutral-800 p-4 text-center text-sm text-neutral-500">
+          <p className="rounded-xl border border-[#e2e9dd] p-4 text-center text-sm text-[#75897a]">
             Le Vestiaire est ouvert — premier message, première tournée. 🍻
           </p>
         )}
@@ -145,13 +145,13 @@ export function Chat({
               <div
                 className={`max-w-[85%] rounded-2xl border px-3 py-2 text-sm ${
                   mine
-                    ? "rounded-br-sm border-green-900 bg-green-950/50"
-                    : "rounded-bl-sm border-neutral-800 bg-neutral-900/70"
+                    ? "rounded-br-sm border-[#bfe8ca] bg-[#dcf5e0]"
+                    : "rounded-bl-sm border-[#e2e9dd] bg-white"
                 }`}
               >
-                <p className="text-[10px] font-bold text-green-500">
+                <p className="text-[10px] font-bold text-green-600">
                   {memberNames[m.member_id] ?? "?"}
-                  <span className="ml-2 font-normal text-neutral-600">
+                  <span className="ml-2 font-normal text-[#8b9c8d]">
                     {timeFmt.format(new Date(m.created_at))}
                   </span>
                 </p>
@@ -177,9 +177,9 @@ export function Chat({
                         onClick={() => react(m.id, emoji)}
                         className={`rounded-full px-1.5 py-0.5 text-[11px] ${
                           entry?.mine
-                            ? "bg-green-900/70"
+                            ? "bg-[#bfe8ca]"
                             : entry
-                              ? "bg-neutral-800"
+                              ? "bg-[#eef2ea]"
                               : "opacity-30 hover:opacity-100"
                         }`}
                         title={entry?.mine ? "Retirer ma réaction" : "Réagir"}
@@ -192,7 +192,7 @@ export function Chat({
                 </div>
               </div>
               {m.looks_like_prediction && (
-                <p className="mt-1 max-w-[85%] rounded-lg bg-amber-950/50 px-2 py-1 text-[11px] text-amber-400">
+                <p className="mt-1 max-w-[85%] rounded-lg bg-[#fdf1dc] px-2 py-1 text-[11px] text-amber-700">
                   ⚠️ Psst — un pronostic posté ici ne compte pas (article 11). Direction l’onglet
                   📅 Journées !
                 </p>
@@ -206,7 +206,7 @@ export function Chat({
       <form ref={formRef} onSubmit={onSubmit} className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <label
-            className="cursor-pointer rounded-full border border-neutral-700 px-2.5 py-2 text-sm hover:border-neutral-500"
+            className="cursor-pointer rounded-full border border-[#bcd9c2] px-2.5 py-2 text-sm hover:border-[#9ec4a8]"
             title="Joindre une photo"
           >
             📎
@@ -223,20 +223,20 @@ export function Chat({
             placeholder="Écrire au Vestiaire…"
             autoComplete="off"
             maxLength={2000}
-            className="min-w-0 flex-1 rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm outline-none focus:border-green-600"
+            className="min-w-0 flex-1 rounded-full border border-[#bcd9c2] bg-white px-4 py-2 text-sm outline-none focus:border-green-600"
           />
           <button
             type="submit"
             disabled={pending}
-            className="rounded-full bg-green-700 px-3.5 py-2 text-sm font-bold hover:bg-green-600 disabled:opacity-50"
+            className="rounded-full bg-green-600 text-white px-3.5 py-2 text-sm font-bold hover:bg-green-500 disabled:opacity-50"
             aria-label="Envoyer"
           >
             ➤
           </button>
         </div>
-        {photoName && <p className="pl-11 text-[11px] text-neutral-500">📎 {photoName}</p>}
+        {photoName && <p className="pl-11 text-[11px] text-[#75897a]">📎 {photoName}</p>}
         {result && !result.ok && (
-          <p className="pl-11 text-[11px] text-red-400">
+          <p className="pl-11 text-[11px] text-red-600">
             {result.title}
             {result.detail ? ` — ${result.detail}` : ""}
           </p>

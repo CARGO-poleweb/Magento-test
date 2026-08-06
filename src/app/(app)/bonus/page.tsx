@@ -63,7 +63,7 @@ export default async function BonusPage() {
     <div className="flex flex-col gap-5">
       <header>
         <h1 className="text-xl font-bold">Bonus cachés</h1>
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-[#75897a]">
           {season ? `${season.name} · ` : ""}
           {revealed
             ? "Les bonus ont été révélés par le Président."
@@ -79,11 +79,11 @@ export default async function BonusPage() {
           return (
             <section
               key={bonus.type}
-              className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4"
+              className="rounded-xl border border-[#e2e9dd] bg-white p-4"
             >
               <div className="mb-2 flex items-baseline justify-between gap-2">
                 <h2 className="font-semibold">{bonus.label}</h2>
-                <span className="text-xs text-amber-400">{bonus.points}</span>
+                <span className="text-xs text-amber-700">{bonus.points}</span>
               </div>
               {open ? (
                 <BonusForm
@@ -93,11 +93,11 @@ export default async function BonusPage() {
                   current={current?.answer}
                 />
               ) : current ? (
-                <p className="font-mono text-sm text-neutral-300">
+                <p className="font-mono text-sm text-[#3a4d40]">
                   🔒 {current.answer.value ?? current.answer.values?.join(" · ")}
                 </p>
               ) : (
-                <p className="text-sm text-neutral-600">Non déposé — trop tard.</p>
+                <p className="text-sm text-[#8b9c8d]">Non déposé — trop tard.</p>
               )}
             </section>
           );
@@ -108,11 +108,11 @@ export default async function BonusPage() {
           {BONUSES.map((bonus) => (
             <section
               key={bonus.type}
-              className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4"
+              className="rounded-xl border border-[#e2e9dd] bg-white p-4"
             >
               <div className="mb-2 flex items-baseline justify-between gap-2">
                 <h2 className="font-semibold">{bonus.label}</h2>
-                <span className="text-xs text-amber-400">{bonus.points}</span>
+                <span className="text-xs text-amber-700">{bonus.points}</span>
               </div>
               <ul className="flex flex-col gap-1 text-sm">
                 {all
@@ -120,13 +120,13 @@ export default async function BonusPage() {
                   .sort((a, b) => a.submitted_at.localeCompare(b.submitted_at))
                   .map((b) => (
                     <li key={b.id} className="flex items-center justify-between gap-2">
-                      <span className="text-neutral-400">
+                      <span className="text-[#5c7263]">
                         {membersById.get(b.member_id)?.display_name ?? "?"}
                       </span>
                       <span className="font-mono text-xs">
                         {b.answer.value ?? b.answer.values?.join(" · ")}
                         {b.points_awarded !== null && (
-                          <span className="ml-2 font-bold text-green-400">
+                          <span className="ml-2 font-bold text-green-700">
                             +{b.points_awarded}
                           </span>
                         )}

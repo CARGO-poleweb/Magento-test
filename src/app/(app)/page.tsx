@@ -29,7 +29,7 @@ export default async function ClassementPage({
 
   if (!viewedSeason) {
     return (
-      <p className="rounded-xl border border-neutral-800 p-4 text-sm text-neutral-500">
+      <p className="rounded-xl border border-[#e2e9dd] p-4 text-sm text-[#75897a]">
         Aucune saison configurée — le Président doit en créer une.
       </p>
     );
@@ -292,9 +292,9 @@ export default async function ClassementPage({
   }
 
   const TONE_CLASSES: Record<ActionCard["tone"], string> = {
-    green: "border-green-900 bg-green-950/40 hover:bg-green-950/70",
-    amber: "border-amber-900/70 bg-amber-950/30 hover:bg-amber-950/50",
-    neutral: "border-neutral-800 bg-neutral-900/50 hover:bg-neutral-900",
+    green: "border-[#bfe8ca] bg-[#e4f6e9] hover:bg-[#d0efd7]",
+    amber: "border-[#f0d9a8] bg-[#fdf3e0] hover:bg-[#f9ead0]",
+    neutral: "border-[#e2e9dd] bg-white hover:bg-[#eef4ea]",
   };
 
   return (
@@ -307,8 +307,8 @@ export default async function ClassementPage({
               href={s.is_current ? "/" : `/?saison=${s.id}`}
               className={`rounded-full border px-3 py-1 text-xs ${
                 s.id === viewedSeason.id
-                  ? "border-green-700 bg-green-950/60 text-green-300"
-                  : "border-neutral-700 text-neutral-400 hover:text-neutral-200"
+                  ? "border-green-700 bg-[#dcf5e0] text-green-800"
+                  : "border-[#bcd9c2] text-[#5c7263] hover:text-[#2a3b30]"
               }`}
             >
               {s.name}
@@ -319,7 +319,7 @@ export default async function ClassementPage({
       )}
 
       {isArchive && (
-        <p className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-3 text-xs text-neutral-400">
+        <p className="rounded-xl border border-[#e2e9dd] bg-white p-3 text-xs text-[#5c7263]">
           📜 Archive : classement final de la saison {viewedSeason.name}.
         </p>
       )}
@@ -340,11 +340,11 @@ export default async function ClassementPage({
 
       <section>
         <h1 className="mb-3 text-xl font-bold">
-          Classement général <span className="text-sm font-normal text-neutral-500">· {viewedSeason.name}</span>
+          Classement général <span className="text-sm font-normal text-[#75897a]">· {viewedSeason.name}</span>
         </h1>
-        <div className="overflow-hidden rounded-xl border border-neutral-800">
+        <div className="overflow-hidden rounded-xl border border-[#e2e9dd]">
           <table className="w-full text-sm">
-            <thead className="bg-neutral-900 text-left text-xs uppercase text-neutral-500">
+            <thead className="bg-white text-left text-xs uppercase text-[#75897a]">
               <tr>
                 <th className="px-3 py-2">#</th>
                 <th className="px-3 py-2">Membre</th>
@@ -361,17 +361,17 @@ export default async function ClassementPage({
                 return (
                   <tr
                     key={row.memberId}
-                    className={`border-t border-neutral-800 ${isMe ? "bg-green-950/30" : ""} ${member.is_radie ? "opacity-40" : ""}`}
+                    className={`border-t border-[#e2e9dd] ${isMe ? "bg-[#eaf7ee]" : ""} ${member.is_radie ? "opacity-40" : ""}`}
                   >
                     <td className="px-3 py-2">{medals[i] ?? i + 1}</td>
                     <td className="px-3 py-2 font-medium">
                       {member.display_name}
                       {member.is_radie && " ⛔"}
-                      {isMe && <span className="ml-1 text-xs text-green-500">(toi)</span>}
+                      {isMe && <span className="ml-1 text-xs text-green-600">(toi)</span>}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">{row.matchdayPoints}</td>
                     <td
-                      className={`px-3 py-2 text-right tabular-nums ${row.adjustments < 0 ? "text-red-400" : "text-neutral-500"}`}
+                      className={`px-3 py-2 text-right tabular-nums ${row.adjustments < 0 ? "text-red-600" : "text-[#75897a]"}`}
                     >
                       {row.adjustments !== 0 ? row.adjustments : "—"}
                     </td>
@@ -381,7 +381,7 @@ export default async function ClassementPage({
               })}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-neutral-500">
+                  <td colSpan={5} className="px-3 py-6 text-center text-[#75897a]">
                     Personne au classement pour l’instant.
                   </td>
                 </tr>
@@ -389,7 +389,7 @@ export default async function ClassementPage({
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs text-neutral-600">
+        <p className="mt-2 text-xs text-[#8b9c8d]">
           Barème : score exact 4 pts · bonne différence de buts 3 pts · bon vainqueur 2 pts · tous
           les résultats +3 · tous les scores +10 · journée blanche −2.
         </p>

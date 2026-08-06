@@ -27,7 +27,7 @@ export default async function JourneesPage() {
     <div className="flex flex-col gap-3">
       <h1 className="text-xl font-bold">Journées</h1>
       {days.length === 0 && (
-        <p className="rounded-xl border border-neutral-800 p-4 text-sm text-neutral-500">
+        <p className="rounded-xl border border-[#e2e9dd] p-4 text-sm text-[#75897a]">
           Aucune journée publiée. Article 10 : on ne joue pas avant que la programmation ne soit
           diffusée par le Président.
         </p>
@@ -40,23 +40,23 @@ export default async function JourneesPage() {
           <Link
             key={day.id}
             href={`/journees/${day.number}`}
-            className="flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 hover:bg-neutral-900"
+            className="flex items-center justify-between rounded-xl border border-[#e2e9dd] bg-white p-4 hover:bg-[#eef4ea]"
           >
             <div>
               <p className="font-semibold">
                 Journée {day.number}
                 {day.type === "multiplex" && (
-                  <span className="ml-2 rounded bg-amber-900/60 px-1.5 py-0.5 text-xs text-amber-300">
+                  <span className="ml-2 rounded bg-[#f7e3b8] px-1.5 py-0.5 text-xs text-amber-800">
                     MULTIPLEX
                   </span>
                 )}
               </p>
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-[#75897a]">
                 {day.fixtures.length} match{day.fixtures.length > 1 ? "s" : ""}
                 {first && ` · 1er coup d'envoi ${formatKickoff(first.kickoff_at)}`}
               </p>
             </div>
-            <span className="text-xs text-neutral-400">{STATUS_LABELS[day.status]}</span>
+            <span className="text-xs text-[#5c7263]">{STATUS_LABELS[day.status]}</span>
           </Link>
         );
       })}

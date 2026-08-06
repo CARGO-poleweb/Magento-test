@@ -32,7 +32,7 @@ export function BonusForm({
               defaultValue={current?.values?.[i - 1] ?? ""}
               placeholder={`${i}. ${placeholder}`}
               autoComplete="off"
-              className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm outline-none focus:border-green-600"
+              className="rounded-lg border border-[#bcd9c2] bg-white px-3 py-2 text-sm outline-none focus:border-green-600"
             />
           ))}
         </div>
@@ -42,19 +42,19 @@ export function BonusForm({
           defaultValue={current?.value ?? ""}
           placeholder={placeholder}
           autoComplete="off"
-          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm outline-none focus:border-green-600"
+          className="rounded-lg border border-[#bcd9c2] bg-white px-3 py-2 text-sm outline-none focus:border-green-600"
         />
       )}
       <div className="flex items-center gap-2">
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-green-700 px-3 py-1.5 text-sm font-semibold hover:bg-green-600 disabled:opacity-50"
+          className="rounded-lg bg-green-600 text-white px-3 py-1.5 text-sm font-semibold hover:bg-green-500 disabled:opacity-50"
         >
           {pending ? "…" : current ? "Modifier (scellé 🔒)" : "Sceller 🔒"}
         </button>
         {result && (
-          <span className={`text-xs ${result.ok ? "text-green-400" : "text-red-400"}`}>
+          <span className={`text-xs ${result.ok ? "text-green-700" : "text-red-600"}`}>
             {result.title}
           </span>
         )}
