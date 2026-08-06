@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronLeft, Lock, Unlock } from "@/components/icons";
+import { teamColor } from "@/lib/teamColors";
 import { notFound } from "next/navigation";
 import { PredictionForm } from "@/components/PredictionForm";
 import { formatKickoff, getCurrentSeason, getSessionProfile } from "@/lib/data";
@@ -76,8 +77,8 @@ export default async function JourneePage({ params }: { params: Promise<{ number
         <h1 className="text-xl font-bold">
           Journée {day.number}
           {day.type === "multiplex" && (
-            <span className="ml-2 rounded bg-warn-line px-1.5 py-0.5 text-xs text-warn">
-              MULTIPLEX
+            <span className="ml-2 rounded-full bg-bonus-soft px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-bonus align-middle">
+              Multiplex
             </span>
           )}
         </h1>
@@ -125,13 +126,29 @@ export default async function JourneePage({ params }: { params: Promise<{ number
               className="rounded-xl border border-line bg-surface p-4"
             >
               <div className="flex items-baseline justify-between gap-2">
-                <h2 className="font-semibold">
-                  <span className="mr-2 text-xs text-faint">{fixture.position}.</span>
-                  {home.short_name} <span className="text-muted">vs</span> {away.short_name}
+                <h2 className="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold">
+                  <span className="text-xs font-normal text-faint">{fixture.position}.</span>
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      className="size-2.5 rounded-full ring-1 ring-black/10"
+                      style={{ background: teamColor(home.short_name) }}
+                      aria-hidden
+                    />
+                    {home.short_name}
+                  </span>
+                  <span className="text-xs font-normal text-faint">reçoit</span>
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      className="size-2.5 rounded-full ring-1 ring-black/10"
+                      style={{ background: teamColor(away.short_name) }}
+                      aria-hidden
+                    />
+                    {away.short_name}
+                  </span>
                 </h2>
                 {result ? (
-                  <span className="rounded bg-subtle px-2 py-0.5 font-mono text-sm font-bold">
-                    {result.home}-{result.away}
+                  <span className="rounded-lg bg-ink px-2.5 py-1 text-sm font-bold text-white tabular">
+                    {result.home}–{result.away}
                   </span>
                 ) : (
                   <span className="text-xs text-muted">

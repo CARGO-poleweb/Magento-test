@@ -2,10 +2,10 @@ import Link from "next/link";
 import { formatKickoff, getCurrentSeason, getSessionProfile } from "@/lib/data";
 import type { Fixture, Matchday } from "@/lib/types";
 
-const STATUS_LABELS = {
-  brouillon: "En préparation",
-  publiee: "Ouverte",
-  terminee: "Terminée",
+const STATUS_CHIPS = {
+  brouillon: { label: "En préparation", className: "bg-subtle text-muted" },
+  publiee: { label: "Ouverte", className: "bg-accent text-white" },
+  terminee: { label: "Terminée", className: "bg-subtle text-muted" },
 } as const;
 
 export default async function JourneesPage() {
@@ -46,8 +46,8 @@ export default async function JourneesPage() {
               <p className="font-semibold">
                 Journée {day.number}
                 {day.type === "multiplex" && (
-                  <span className="ml-2 rounded bg-warn-line px-1.5 py-0.5 text-xs text-warn">
-                    MULTIPLEX
+                  <span className="ml-2 rounded-full bg-bonus-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-bonus">
+                    Multiplex
                   </span>
                 )}
               </p>
@@ -56,7 +56,11 @@ export default async function JourneesPage() {
                 {first && ` · 1er coup d'envoi ${formatKickoff(first.kickoff_at)}`}
               </p>
             </div>
-            <span className="text-xs text-muted">{STATUS_LABELS[day.status]}</span>
+            <span
+              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_CHIPS[day.status].className}`}
+            >
+              {STATUS_CHIPS[day.status].label}
+            </span>
           </Link>
         );
       })}

@@ -1,36 +1,57 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Système de design « épuré moderne »
-   Une seule couleur d'accent (le vert de la ligue), utilisée avec parcimonie :
-   action principale, onglet actif, chiffres qui comptent. Le reste est de
-   l'encre sur du papier, séparé par des filets d'un pixel et de l'espace.
+   Palette « pelouse & maillots »
+   Le vert profond porte l'identité (en-tête, action du moment). Autour,
+   une famille de teintes qui servent à distinguer les univers de l'app :
+   bonus, cagnotte, discipline, présidence. Rien de décoratif : chaque
+   couleur code une information.
 --------------------------------------------------------------------------- */
 @theme {
-  --color-canvas: #f7f8f6;
+  --color-canvas: #f2f5f1;
   --color-surface: #ffffff;
-  --color-subtle: #f0f2ee;
-  --color-line: #e4e7e1;
-  --color-line-strong: #d2d7cd;
+  --color-subtle: #eef2ec;
+  --color-line: #e0e6dd;
+  --color-line-strong: #cbd6c6;
 
-  --color-ink: #161a17;
-  --color-muted: #667065;
-  --color-faint: #98a196;
+  --color-ink: #12211a;
+  --color-muted: #5d6c62;
+  --color-faint: #8d9b91;
 
-  --color-accent: #0d8a4a;
-  --color-accent-strong: #0a6f3b;
-  --color-accent-soft: #e8f4ec;
-  --color-accent-line: #c2e2ce;
+  /* Vert de la ligue */
+  --color-accent: #0f9d54;
+  --color-accent-strong: #067a3e;
+  --color-accent-deep: #04532b;
+  --color-accent-soft: #e2f5e9;
+  --color-accent-line: #b3e5c6;
 
-  --color-warn: #a35b06;
-  --color-warn-soft: #fdf4e6;
-  --color-warn-line: #f0dcb6;
+  /* Univers thématiques (pastilles d'icônes, accents de section) */
+  --color-bonus: #7c5cff;
+  --color-bonus-soft: #ede9ff;
+  --color-money: #e08a1e;
+  --color-money-soft: #fdf1de;
+  --color-justice: #2e78f0;
+  --color-justice-soft: #e6f0fe;
+  --color-crown: #b8860b;
+  --color-crown-soft: #fbf2d9;
 
-  --color-danger: #b4231b;
-  --color-danger-soft: #fdefed;
-  --color-danger-line: #f3ccc7;
+  /* Sémantique */
+  --color-warn: #b4690e;
+  --color-warn-soft: #fdf2e0;
+  --color-warn-line: #f3ddb2;
+  --color-danger: #cc2b21;
+  --color-danger-soft: #fdeceb;
+  --color-danger-line: #f7c9c5;
 
-  --radius-card: 14px;
+  /* Podium */
+  --color-gold: #d4a017;
+  --color-gold-soft: #fbf3da;
+  --color-silver: #8c98a4;
+  --color-silver-soft: #eff2f5;
+  --color-bronze: #b5713a;
+  --color-bronze-soft: #f9ece1;
+
+  --radius-card: 16px;
 }
 
 :root {

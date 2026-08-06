@@ -86,7 +86,12 @@ export default async function ClassementPage({
   );
 
   const byId = new Map(members.map((m) => [m.id, m]));
-  const medals = ["🥇", "🥈", "🥉"];
+  // Or, argent, bronze : le podium se lit à la couleur, sans emoji.
+  const PODIUM = [
+    "bg-gold-soft text-gold",
+    "bg-silver-soft text-silver",
+    "bg-bronze-soft text-bronze",
+  ];
   const isArchive = !viewedSeason.is_current;
 
   // -------------------------------------------------------------------------
@@ -316,10 +321,10 @@ export default async function ClassementPage({
     }
   }
 
-  const TONE: Record<ActionCard["tone"], { box: string; icon: string }> = {
-    accent: { box: "border-accent-line bg-accent-soft", icon: "text-accent" },
-    warn: { box: "border-warn-line bg-warn-soft", icon: "text-warn" },
-    neutral: { box: "border-line bg-surface", icon: "text-faint" },
+  const TONE: Record<ActionCard["tone"], { box: string; tile: string }> = {
+    accent: { box: "border-accent-line bg-accent-soft", tile: "bg-accent text-white" },
+    warn: { box: "border-warn-line bg-warn-soft", tile: "bg-warn text-white" },
+    neutral: { box: "border-line bg-surface", tile: "bg-subtle text-muted" },
   };
 
   return (
@@ -350,16 +355,42 @@ export default async function ClassementPage({
       )}
 
       {cards.length > 0 && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2.5">
           {cards.map((card, i) => {
+            // La première carte est l'action du moment : elle prend la
+            // couleur pleine de la ligue. Les suivantes restent en retrait.
+            if (i === 0) {
+              return (
+                <Link
+                  key={i}
+                  href={card.href}
+                  className="flex items-center gap-4 rounded-card bg-accent px-5 py-5 text-white shadow-[0_10px_24px_-12px_rgba(15,157,84,0.8)] transition-transform active:scale-[0.99]"
+                >
+                  <span className="grid size-11 shrink-0 place-items-center rounded-full bg-white/20">
+                    <card.Icon size={22} strokeWidth={2} aria-hidden />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-semibold leading-snug">
+                      {card.title}
+                    </span>
+                    {card.detail && (
+                      <span className="mt-0.5 block text-xs text-white/80">{card.detail}</span>
+                    )}
+                  </span>
+                  <ChevronRight size={18} className="shrink-0 text-white/70" aria-hidden />
+                </Link>
+              );
+            }
             const tone = TONE[card.tone];
             return (
               <Link
                 key={i}
                 href={card.href}
-                className={`flex items-center gap-3 rounded-card border px-4 py-3.5 transition-colors hover:border-line-strong ${tone.box}`}
+                className={`flex items-center gap-3 rounded-card border px-4 py-3 transition-colors hover:border-line-strong ${tone.box}`}
               >
-                <card.Icon size={20} strokeWidth={1.8} className={`shrink-0 ${tone.icon}`} aria-hidden />
+                <span className={`grid size-9 shrink-0 place-items-center rounded-full ${tone.tile}`}>
+                  <card.Icon size={17} strokeWidth={2} aria-hidden />
+                </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-medium leading-snug">{card.title}</span>
                   {card.detail && (
@@ -388,11 +419,15 @@ export default async function ClassementPage({
               <li
                 key={row.memberId}
                 className={`flex items-center gap-3 border-b border-line px-4 py-3 last:border-b-0 ${
-                  isMe ? "bg-accent-soft" : ""
+                  isMe ? "bg-accent-soft" : i === 0 ? "bg-gold-soft/40" : ""
                 } ${member.is_radie ? "opacity-45" : ""}`}
               >
-                <span className="w-6 shrink-0 text-center text-sm text-faint tabular">
-                  {medals[i] ?? i + 1}
+                <span
+                  className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold tabular ${
+                    PODIUM[i] ?? "text-faint"
+                  }`}
+                >
+                  {i + 1}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">
@@ -409,7 +444,13 @@ export default async function ClassementPage({
                     )}
                   </span>
                 </span>
-                <span className="shrink-0 text-base font-semibold tabular">{row.total}</span>
+                <span
+                  className={`shrink-0 text-lg font-bold tabular ${
+                    i === 0 ? "text-gold" : "text-ink"
+                  }`}
+                >
+                  {row.total}
+                </span>
               </li>
             );
           })}
