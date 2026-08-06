@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronLeft, Lock, Unlock } from "@/components/icons";
 import { notFound } from "next/navigation";
 import { PredictionForm } from "@/components/PredictionForm";
 import { formatKickoff, getCurrentSeason, getSessionProfile } from "@/lib/data";
@@ -13,10 +14,10 @@ import {
 } from "@/lib/types";
 
 const STATUS_CHIPS: Record<Prediction["status"], { label: string; className: string }> = {
-  auto_valide: { label: "✅ pris en compte", className: "bg-[#dcf5e0] text-green-800" },
-  a_examiner: { label: "⚠️ examen Commission", className: "bg-[#fdf1dc] text-amber-800" },
-  comptabilise: { label: "✅ validé par la Commission", className: "bg-[#dcf5e0] text-green-800" },
-  non_comptabilise: { label: "❌ non comptabilisé", className: "bg-[#fde9e6] text-red-700" },
+  auto_valide: { label: "pris en compte", className: "bg-accent-soft text-accent-strong" },
+  a_examiner: { label: "examen Commission", className: "bg-warn-soft text-warn" },
+  comptabilise: { label: "validé par la Commission", className: "bg-accent-soft text-accent-strong" },
+  non_comptabilise: { label: "non comptabilisé", className: "bg-danger-soft text-danger" },
 };
 
 export default async function JourneePage({ params }: { params: Promise<{ number: string }> }) {
@@ -67,19 +68,20 @@ export default async function JourneePage({ params }: { params: Promise<{ number
   return (
     <div className="flex flex-col gap-5">
       {/* Pas de bouton « retour » navigateur en PWA installée : on le fournit. */}
-      <Link href="/journees" className="text-xs text-[#75897a] hover:text-[#3a4d40]">
-        ← Toutes les journées
+      <Link href="/journees" className="text-xs text-muted hover:text-ink">
+        <ChevronLeft size={14} className="mr-0.5 inline align-[-2px]" aria-hidden />
+        Toutes les journées
       </Link>
       <header>
         <h1 className="text-xl font-bold">
           Journée {day.number}
           {day.type === "multiplex" && (
-            <span className="ml-2 rounded bg-[#f7e3b8] px-1.5 py-0.5 text-xs text-amber-800">
+            <span className="ml-2 rounded bg-warn-line px-1.5 py-0.5 text-xs text-warn">
               MULTIPLEX
             </span>
           )}
         </h1>
-        <p className="text-xs text-[#75897a]">
+        <p className="text-xs text-muted">
           Article 6 : chaque match se verrouille 30 minutes avant son coup d’envoi. Article 10 : on
           joue dans l’ordre de la programmation.
           {day.type === "multiplex" && " Article 18 : aucun bonus utilisable sur cette journée."}
@@ -120,20 +122,30 @@ export default async function JourneePage({ params }: { params: Promise<{ number
           return (
             <article
               key={fixture.id}
-              className="rounded-xl border border-[#e2e9dd] bg-white p-4"
+              className="rounded-xl border border-line bg-surface p-4"
             >
               <div className="flex items-baseline justify-between gap-2">
                 <h2 className="font-semibold">
-                  <span className="mr-2 text-xs text-[#8b9c8d]">{fixture.position}.</span>
-                  {home.short_name} <span className="text-[#75897a]">vs</span> {away.short_name}
+                  <span className="mr-2 text-xs text-faint">{fixture.position}.</span>
+                  {home.short_name} <span className="text-muted">vs</span> {away.short_name}
                 </h2>
                 {result ? (
-                  <span className="rounded bg-[#eef2ea] px-2 py-0.5 font-mono text-sm font-bold">
+                  <span className="rounded bg-subtle px-2 py-0.5 font-mono text-sm font-bold">
                     {result.home}-{result.away}
                   </span>
                 ) : (
-                  <span className="text-xs text-[#75897a]">
-                    {locked ? "🔒 verrouillé" : `🔓 jusqu’à H−30 · ${formatKickoff(fixture.kickoff_at)}`}
+                  <span className="text-xs text-muted">
+                    {locked ? (
+                      <>
+                        <Lock size={12} className="mr-1 inline align-[-1px]" aria-hidden />
+                        verrouillé
+                      </>
+                    ) : (
+                      <>
+                        <Unlock size={12} className="mr-1 inline align-[-1px]" aria-hidden />
+                        {formatKickoff(fixture.kickoff_at)}
+                      </>
+                    )}
                   </span>
                 )}
               </div>
@@ -149,7 +161,7 @@ export default async function JourneePage({ params }: { params: Promise<{ number
                         {STATUS_CHIPS[p.status].label}
                       </span>
                       {p.flag_reason && (
-                        <span className="text-xs text-[#75897a]">{p.flag_reason}</span>
+                        <span className="text-xs text-muted">{p.flag_reason}</span>
                       )}
                     </li>
                   ))}
@@ -163,8 +175,8 @@ export default async function JourneePage({ params }: { params: Promise<{ number
                     placeholder={`${home.short_name} 2-1 ${away.short_name}`}
                   />
                   {mine.length > 0 && (
-                    <p className="mt-1 text-[11px] text-amber-700">
-                      ⚠️ Article 6 : le premier pari est accepté — reparier ce match part en
+                    <p className="mt-1 text-[11px] text-warn">
+                      Article 6 : le premier pari est accepté — reparier ce match part en
                       Commission (carton jaune possible).
                     </p>
                   )}
@@ -172,7 +184,7 @@ export default async function JourneePage({ params }: { params: Promise<{ number
               )}
 
               {result && myEffective && (
-                <p className="mt-2 text-xs text-[#5c7263]">
+                <p className="mt-2 text-xs text-muted">
                   Ton pronostic comptabilisé : {myEffective.home_score_parsed}-
                   {myEffective.away_score_parsed}
                 </p>
@@ -180,13 +192,13 @@ export default async function JourneePage({ params }: { params: Promise<{ number
 
               {othersEffective.length > 0 && (
                 <details className="mt-3 text-sm">
-                  <summary className="cursor-pointer text-xs text-[#75897a]">
+                  <summary className="cursor-pointer text-xs text-muted">
                     Les paris des copains ({othersEffective.length})
                   </summary>
                   <ul className="mt-2 flex flex-col gap-1">
                     {othersEffective.map(({ member, pred }) => (
                       <li key={member.id} className="flex flex-wrap items-center gap-2">
-                        <span className="text-[#5c7263]">{member.display_name}</span>
+                        <span className="text-muted">{member.display_name}</span>
                         {pred.map((p) => (
                           <span key={p.id} className="font-mono text-xs">
                             « {p.raw_text} »
@@ -206,7 +218,7 @@ export default async function JourneePage({ params }: { params: Promise<{ number
           );
         })}
         {fixtures.length === 0 && (
-          <p className="rounded-xl border border-[#e2e9dd] p-4 text-sm text-[#75897a]">
+          <p className="rounded-xl border border-line p-4 text-sm text-muted">
             Aucun match dans cette journée pour l’instant.
           </p>
         )}
@@ -217,9 +229,9 @@ export default async function JourneePage({ params }: { params: Promise<{ number
           <h2 className="mb-2 font-bold">
             Points de la journée {finished ? "(définitifs)" : "(provisoires — bonus/malus à la clôture)"}
           </h2>
-          <div className="overflow-hidden rounded-xl border border-[#e2e9dd]">
+          <div className="overflow-hidden rounded-xl border border-line">
             <table className="w-full text-sm">
-              <thead className="bg-white text-left text-xs uppercase text-[#75897a]">
+              <thead className="bg-surface text-left text-xs uppercase text-muted">
                 <tr>
                   <th className="px-3 py-2">Membre</th>
                   <th className="px-3 py-2 text-right">Matchs</th>
@@ -231,11 +243,11 @@ export default async function JourneePage({ params }: { params: Promise<{ number
                 {dayRanking.map(({ member, breakdown }) => (
                   <tr
                     key={member.id}
-                    className={`border-t border-[#e2e9dd] ${member.id === profile.id ? "bg-[#eaf7ee]" : ""}`}
+                    className={`border-t border-line ${member.id === profile.id ? "bg-accent-soft" : ""}`}
                   >
                     <td className="px-3 py-2">{member.display_name}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{breakdown.basePoints}</td>
-                    <td className="px-3 py-2 text-right text-xs text-[#5c7263]">
+                    <td className="px-3 py-2 text-right text-xs text-muted">
                       {breakdown.allExact && "tous les scores +10 · "}
                       {breakdown.allOutcomes && "tous les résultats +3"}
                       {breakdown.blankDay && "journée blanche −2"}

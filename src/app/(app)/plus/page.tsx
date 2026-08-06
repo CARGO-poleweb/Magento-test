@@ -1,35 +1,43 @@
 import Link from "next/link";
+import type { LucideIcon } from "lucide-react";
 import { signOut } from "@/app/actions";
 import { NotificationSettings } from "@/components/NotificationSettings";
+import { ChevronRight, Crown, Gift, LogOut, Scale, Wallet } from "@/components/icons";
 import { canJudge, getSessionProfile } from "@/lib/data";
 
 export default async function PlusPage() {
   const { supabase, profile } = await getSessionProfile();
 
-  const { data: notifSettings } = await supabase
-    .from("notification_settings")
-    .select("vestiaire, jeu")
-    .eq("member_id", profile.id)
-    .maybeSingle();
+  const [notifRes, pendingRes] = await Promise.all([
+    supabase
+      .from("notification_settings")
+      .select("vestiaire, jeu")
+      .eq("member_id", profile.id)
+      .maybeSingle(),
+    canJudge(profile.role)
+      ? supabase
+          .from("predictions")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "a_examiner")
+      : Promise.resolve({ count: 0 }),
+  ]);
+  const notifSettings = notifRes.data;
+  const pendingCount = pendingRes.count ?? 0;
 
-  // Pastille : dossiers en attente pour les membres de la Commission.
-  let pendingCount = 0;
-  if (canJudge(profile.role)) {
-    const { count } = await supabase
-      .from("predictions")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "a_examiner");
-    pendingCount = count ?? 0;
-  }
-
-  const entries = [
-    { href: "/bonus", icon: "🎁", label: "Bonus cachés", detail: "À sceller avant la deadline" },
-    { href: "/cagnotte", icon: "💰", label: "Cagnotte", detail: "Mises, amendes, Ballon d'Or" },
+  const entries: {
+    href: string;
+    Icon: LucideIcon;
+    label: string;
+    detail: string;
+    badge?: number;
+  }[] = [
+    { href: "/bonus", Icon: Gift, label: "Bonus cachés", detail: "À sceller avant la deadline" },
+    { href: "/cagnotte", Icon: Wallet, label: "Cagnotte", detail: "Mises, amendes, Ballon d’Or" },
     ...(canJudge(profile.role)
       ? [
           {
             href: "/commission",
-            icon: "⚖️",
+            Icon: Scale,
             label: "Commission de discipline",
             detail:
               pendingCount > 0
@@ -43,7 +51,7 @@ export default async function PlusPage() {
       ? [
           {
             href: "/admin",
-            icon: "🎩",
+            Icon: Crown,
             label: "Espace du Président",
             detail: "Journées, résultats, membres, saisons",
           },
@@ -52,27 +60,27 @@ export default async function PlusPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-bold">Plus</h1>
+    <div className="flex flex-col gap-5">
+      <h2 className="text-lg font-semibold tracking-tight">Plus</h2>
 
-      <nav className="overflow-hidden rounded-xl border border-[#e2e9dd]">
+      <nav className="overflow-hidden rounded-card border border-line bg-surface">
         {entries.map((e) => (
           <Link
             key={e.href}
             href={e.href}
-            className="flex items-center gap-3 border-b border-[#e2e9dd] bg-white px-4 py-3 last:border-b-0 hover:bg-[#eef4ea]"
+            className="flex items-center gap-3 border-b border-line px-4 py-3.5 transition-colors last:border-b-0 hover:bg-subtle"
           >
-            <span className="text-xl">{e.icon}</span>
+            <e.Icon size={19} strokeWidth={1.8} className="shrink-0 text-faint" aria-hidden />
             <span className="min-w-0 flex-1">
-              <span className="block font-semibold">{e.label}</span>
-              <span className="block text-xs text-[#75897a]">{e.detail}</span>
+              <span className="block text-sm font-medium">{e.label}</span>
+              <span className="block text-xs text-muted">{e.detail}</span>
             </span>
-            {"badge" in e && (e.badge ?? 0) > 0 && (
-              <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">
+            {(e.badge ?? 0) > 0 && (
+              <span className="rounded-full bg-warn-soft px-2 py-0.5 text-xs font-medium text-warn">
                 {e.badge}
               </span>
             )}
-            <span className="text-[#8b9c8d]">›</span>
+            <ChevronRight size={16} className="shrink-0 text-faint" aria-hidden />
           </Link>
         ))}
       </nav>
@@ -83,14 +91,14 @@ export default async function PlusPage() {
         initialJeu={notifSettings?.jeu ?? true}
       />
 
-      <div className="rounded-xl border border-[#e2e9dd] bg-white p-4 text-xs text-[#75897a]">
-        Connecté en tant que <span className="text-[#3a4d40]">{profile.display_name}</span>. La
-        session reste active tant que tu ne te déconnectes pas — pas besoin de refaire le lien
-        magique.
-      </div>
+      <p className="text-xs leading-relaxed text-faint">
+        Connecté en tant que <span className="text-muted">{profile.display_name}</span>. La session
+        reste active tant que tu ne te déconnectes pas.
+      </p>
 
       <form action={signOut}>
-        <button className="w-full rounded-xl border border-[#f6c9c2] px-4 py-3 text-sm font-semibold text-red-600 hover:bg-[#fde9e6]">
+        <button className="flex w-full items-center justify-center gap-2 rounded-card border border-line px-4 py-3 text-sm font-medium text-muted transition-colors hover:border-danger-line hover:text-danger">
+          <LogOut size={16} strokeWidth={1.8} aria-hidden />
           Se déconnecter
         </button>
       </form>

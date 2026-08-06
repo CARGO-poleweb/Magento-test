@@ -1,4 +1,17 @@
 import Link from "next/link";
+import type { LucideIcon } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronRight,
+  Clock,
+  Crown,
+  Flag,
+  Gift,
+  MessageCircle,
+  Radio,
+  Scale,
+  Wallet,
+} from "@/components/icons";
 import { canJudge, formatKickoff, getSessionProfile } from "@/lib/data";
 import { matchdayBreakdown, standings } from "@/lib/scoring";
 import { isFixtureLocked, LOCK_MINUTES, nowMs, type Fixture, type HiddenBonus, type Matchday, type PointAdjustment, type Prediction, type Profile, type Season } from "@/lib/types";
@@ -6,8 +19,10 @@ import { isFixtureLocked, LOCK_MINUTES, nowMs, type Fixture, type HiddenBonus, t
 /** Carte d'action de l'Accueil : chacun est routé vers sa prochaine action. */
 type ActionCard = {
   href: string;
-  tone: "green" | "amber" | "neutral";
-  text: React.ReactNode;
+  tone: "accent" | "warn" | "neutral";
+  Icon: LucideIcon;
+  title: React.ReactNode;
+  detail?: React.ReactNode;
 };
 
 export default async function ClassementPage({
@@ -29,7 +44,7 @@ export default async function ClassementPage({
 
   if (!viewedSeason) {
     return (
-      <p className="rounded-xl border border-[#e2e9dd] p-4 text-sm text-[#75897a]">
+      <p className="rounded-xl border border-line p-4 text-sm text-muted">
         Aucune saison configurée — le Président doit en créer une.
       </p>
     );
@@ -147,28 +162,23 @@ export default async function ClassementPage({
         const nextLock = Math.min(...missing.map((f) => new Date(f.kickoff_at).getTime()));
         cards.push({
           href: `/journees/${openDay.number}`,
-          tone: "green",
-          text: (
+          tone: "accent",
+          Icon: Clock,
+          title: (
             <>
-              ⚽ <b>Journée {openDay.number}</b> — il te reste{" "}
-              <b>
-                {missing.length} prono{missing.length > 1 ? "s" : ""}
-              </b>{" "}
-              · 1ᵉʳ verrouillage{" "}
-              {formatKickoff(new Date(nextLock - LOCK_MINUTES * 60_000).toISOString())} →
+              Journée {openDay.number} — {missing.length} prono
+              {missing.length > 1 ? "s" : ""} à poser
             </>
           ),
+          detail: `Premier verrouillage ${formatKickoff(new Date(nextLock - LOCK_MINUTES * 60_000).toISOString())}`,
         });
       } else {
         cards.push({
           href: `/journees/${openDay.number}`,
           tone: "neutral",
-          text: (
-            <>
-              ✅ <b>Journée {openDay.number}</b> — tes pronos sont posés, va mater ceux des
-              copains →
-            </>
-          ),
+          Icon: CalendarDays,
+          title: <>Journée {openDay.number} — tes pronos sont posés</>,
+          detail: "Va voir ceux des copains",
         });
       }
     } else {
@@ -180,11 +190,9 @@ export default async function ClassementPage({
         cards.push({
           href: `/journees/${liveDay.number}`,
           tone: "neutral",
-          text: (
-            <>
-              📺 <b>Journée {liveDay.number}</b> en cours — suis les points en direct →
-            </>
-          ),
+          Icon: Radio,
+          title: <>Journée {liveDay.number} en cours</>,
+          detail: "Suis les points en direct",
         });
       }
     }
@@ -197,15 +205,19 @@ export default async function ClassementPage({
       const b = matchdayBreakdown(lastFinished.fixtures, myPreds, { finished: true });
       cards.push({
         href: `/journees/${lastFinished.number}`,
-        tone: b.total > 0 ? "neutral" : "amber",
-        text: (
+        tone: b.total > 0 ? "neutral" : "warn",
+        Icon: Flag,
+        title: (
           <>
-            🏁 <b>Journée {lastFinished.number}</b> terminée : tu as pris{" "}
-            <b>{b.total} pt{Math.abs(b.total) > 1 ? "s" : ""}</b>
-            {b.allExact && " (tous les scores, +10 !)"}
-            {b.blankDay && " (journée blanche, −2…)"} →
+            Journée {lastFinished.number} terminée : {b.total} pt
+            {Math.abs(b.total) > 1 ? "s" : ""}
           </>
         ),
+        detail: b.allExact
+          ? "Tous les scores exacts, +10 !"
+          : b.blankDay
+            ? "Journée blanche, −2"
+            : undefined,
       });
     }
 
@@ -214,10 +226,11 @@ export default async function ClassementPage({
       cards.push({
         href: "/vestiaire",
         tone: "neutral",
-        text: (
+        Icon: MessageCircle,
+        title: (
           <>
-            💬 <b>{unread} nouveau{(unread ?? 0) > 1 ? "x" : ""} message{(unread ?? 0) > 1 ? "s" : ""}</b>{" "}
-            au Vestiaire →
+            {unread} nouveau{(unread ?? 0) > 1 ? "x" : ""} message
+            {(unread ?? 0) > 1 ? "s" : ""} au Vestiaire
           </>
         ),
       });
@@ -229,11 +242,11 @@ export default async function ClassementPage({
       if (count > 0) {
         cards.push({
           href: "/commission",
-          tone: "amber",
-          text: (
+          tone: "warn",
+          Icon: Scale,
+          title: (
             <>
-              ⚖️ <b>{count} dossier{(count ?? 0) > 1 ? "s" : ""}</b> attend
-              {(count ?? 0) > 1 ? "ent" : ""} la Commission →
+              {count} dossier{count > 1 ? "s" : ""} attend{count > 1 ? "ent" : ""} la Commission
             </>
           ),
         });
@@ -250,27 +263,24 @@ export default async function ClassementPage({
         const missingResults = toClose.fixtures.filter((f) => f.home_score === null).length;
         cards.push({
           href: "/admin",
-          tone: "amber",
-          text: (
+          tone: "warn",
+          Icon: Crown,
+          title: (
             <>
-              🎩 <b>Journée {toClose.number}</b> :{" "}
+              Journée {toClose.number} :{" "}
               {missingResults > 0
                 ? `${missingResults} résultat${missingResults > 1 ? "s" : ""} à saisir`
-                : "tout est saisi, clôture-la"}{" "}
-              →
+                : "tout est saisi, clôture-la"}
             </>
           ),
         });
       } else if (draft && (draft.fixtures?.length ?? 0) > 0) {
         cards.push({
           href: "/admin",
-          tone: "green",
-          text: (
-            <>
-              🎩 <b>Journée {draft.number}</b> prête — publie-la pour ouvrir les pronos
-              (article 10) →
-            </>
-          ),
+          tone: "accent",
+          Icon: Crown,
+          title: <>Journée {draft.number} prête à publier</>,
+          detail: "Les pronos s'ouvrent à la publication (article 10)",
         });
       }
     }
@@ -284,33 +294,32 @@ export default async function ClassementPage({
       if (missingBonuses > 0) {
         cards.push({
           href: "/bonus",
-          tone: daysLeft <= 7 ? "amber" : "neutral",
-          text: (
+          tone: daysLeft <= 7 ? "warn" : "neutral",
+          Icon: Gift,
+          title: (
             <>
-              🎁 <b>{missingBonuses} bonus caché{missingBonuses > 1 ? "s" : ""}</b> à sceller —
-              J−{daysLeft} →
+              {missingBonuses} bonus caché{missingBonuses > 1 ? "s" : ""} à sceller
             </>
           ),
+          detail: `Plus que ${daysLeft} jour${daysLeft > 1 ? "s" : ""}`,
         });
       }
       if ((myMises ?? []).length === 0) {
         cards.push({
           href: "/cagnotte",
-          tone: daysLeft <= 7 ? "amber" : "neutral",
-          text: (
-            <>
-              💰 Mise de 20 € à régler avant le 30/09 — article 3 : radiation sinon ! →
-            </>
-          ),
+          tone: daysLeft <= 7 ? "warn" : "neutral",
+          Icon: Wallet,
+          title: <>Mise de 20 € à régler</>,
+          detail: "Article 3 : radiation passé la deadline",
         });
       }
     }
   }
 
-  const TONE_CLASSES: Record<ActionCard["tone"], string> = {
-    green: "border-[#bfe8ca] bg-[#e4f6e9] hover:bg-[#d0efd7]",
-    amber: "border-[#f0d9a8] bg-[#fdf3e0] hover:bg-[#f9ead0]",
-    neutral: "border-[#e2e9dd] bg-white hover:bg-[#eef4ea]",
+  const TONE: Record<ActionCard["tone"], { box: string; icon: string }> = {
+    accent: { box: "border-accent-line bg-accent-soft", icon: "text-accent" },
+    warn: { box: "border-warn-line bg-warn-soft", icon: "text-warn" },
+    neutral: { box: "border-line bg-surface", icon: "text-faint" },
   };
 
   return (
@@ -321,10 +330,10 @@ export default async function ClassementPage({
             <Link
               key={s.id}
               href={s.is_current ? "/" : `/?saison=${s.id}`}
-              className={`rounded-full border px-3 py-1 text-xs ${
+              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                 s.id === viewedSeason.id
-                  ? "border-green-700 bg-[#dcf5e0] text-green-800"
-                  : "border-[#bcd9c2] text-[#5c7263] hover:text-[#2a3b30]"
+                  ? "border-accent-line bg-accent-soft text-accent-strong"
+                  : "border-line text-muted hover:border-line-strong hover:text-ink"
               }`}
             >
               {s.name}
@@ -335,79 +344,85 @@ export default async function ClassementPage({
       )}
 
       {isArchive && (
-        <p className="rounded-xl border border-[#e2e9dd] bg-white p-3 text-xs text-[#5c7263]">
-          📜 Archive : classement final de la saison {viewedSeason.name}.
+        <p className="rounded-card border border-line bg-surface px-4 py-3 text-xs text-muted">
+          Archive : classement final de la saison {viewedSeason.name}.
         </p>
       )}
 
       {cards.length > 0 && (
         <div className="flex flex-col gap-2">
-          {cards.map((card, i) => (
-            <Link
-              key={i}
-              href={card.href}
-              className={`rounded-xl border p-4 text-sm ${TONE_CLASSES[card.tone]}`}
-            >
-              {card.text}
-            </Link>
-          ))}
+          {cards.map((card, i) => {
+            const tone = TONE[card.tone];
+            return (
+              <Link
+                key={i}
+                href={card.href}
+                className={`flex items-center gap-3 rounded-card border px-4 py-3.5 transition-colors hover:border-line-strong ${tone.box}`}
+              >
+                <card.Icon size={20} strokeWidth={1.8} className={`shrink-0 ${tone.icon}`} aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium leading-snug">{card.title}</span>
+                  {card.detail && (
+                    <span className="mt-0.5 block text-xs text-muted">{card.detail}</span>
+                  )}
+                </span>
+                <ChevronRight size={16} className="shrink-0 text-faint" aria-hidden />
+              </Link>
+            );
+          })}
         </div>
       )}
 
       <section>
-        <h1 className="mb-3 text-xl font-bold">
-          Classement général <span className="text-sm font-normal text-[#75897a]">· {viewedSeason.name}</span>
-        </h1>
-        <div className="overflow-hidden rounded-xl border border-[#e2e9dd]">
-          <table className="w-full text-sm">
-            <thead className="bg-white text-left text-xs uppercase text-[#75897a]">
-              <tr>
-                <th className="px-3 py-2">#</th>
-                <th className="px-3 py-2">Membre</th>
-                <th className="px-3 py-2 text-right">Journées</th>
-                <th className="px-3 py-2 text-right">Sanctions</th>
-                <th className="px-3 py-2 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => {
-                const member = byId.get(row.memberId);
-                if (!member) return null;
-                const isMe = member.id === profile.id;
-                return (
-                  <tr
-                    key={row.memberId}
-                    className={`border-t border-[#e2e9dd] ${isMe ? "bg-[#eaf7ee]" : ""} ${member.is_radie ? "opacity-40" : ""}`}
-                  >
-                    <td className="px-3 py-2">{medals[i] ?? i + 1}</td>
-                    <td className="px-3 py-2 font-medium">
-                      {member.display_name}
-                      {member.is_radie && " ⛔"}
-                      {isMe && <span className="ml-1 text-xs text-green-600">(toi)</span>}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{row.matchdayPoints}</td>
-                    <td
-                      className={`px-3 py-2 text-right tabular-nums ${row.adjustments < 0 ? "text-red-600" : "text-[#75897a]"}`}
-                    >
-                      {row.adjustments !== 0 ? row.adjustments : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right font-bold tabular-nums">{row.total}</td>
-                  </tr>
-                );
-              })}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-[#75897a]">
-                    Personne au classement pour l’instant.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">Classement</h2>
+          <span className="text-xs text-faint">{viewedSeason.name}</span>
         </div>
-        <p className="mt-2 text-xs text-[#8b9c8d]">
-          Barème : score exact 4 pts · bonne différence de buts 3 pts · bon vainqueur 2 pts · tous
-          les résultats +3 · tous les scores +10 · journée blanche −2.
+
+        <ul className="overflow-hidden rounded-card border border-line bg-surface">
+          {rows.map((row, i) => {
+            const member = byId.get(row.memberId);
+            if (!member) return null;
+            const isMe = member.id === profile.id;
+            return (
+              <li
+                key={row.memberId}
+                className={`flex items-center gap-3 border-b border-line px-4 py-3 last:border-b-0 ${
+                  isMe ? "bg-accent-soft" : ""
+                } ${member.is_radie ? "opacity-45" : ""}`}
+              >
+                <span className="w-6 shrink-0 text-center text-sm text-faint tabular">
+                  {medals[i] ?? i + 1}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">
+                    {member.display_name}
+                    {isMe && <span className="ml-1.5 text-xs font-normal text-accent">toi</span>}
+                    {member.is_radie && (
+                      <span className="ml-1.5 text-xs font-normal text-danger">radié</span>
+                    )}
+                  </span>
+                  <span className="text-xs text-faint tabular">
+                    {row.matchdayPoints} pts de journées
+                    {row.adjustments !== 0 && (
+                      <span className="text-danger"> · {row.adjustments} sanctions</span>
+                    )}
+                  </span>
+                </span>
+                <span className="shrink-0 text-base font-semibold tabular">{row.total}</span>
+              </li>
+            );
+          })}
+          {rows.length === 0 && (
+            <li className="px-4 py-8 text-center text-sm text-muted">
+              Personne au classement pour l’instant.
+            </li>
+          )}
+        </ul>
+
+        <p className="mt-3 text-xs leading-relaxed text-faint">
+          Score exact 4 pts · bonne différence de buts 3 · bon vainqueur 2 · tous les résultats +3 ·
+          tous les scores +10 · journée blanche −2.
         </p>
       </section>
     </div>

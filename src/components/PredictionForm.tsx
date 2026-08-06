@@ -30,12 +30,12 @@ export function PredictionForm({
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
-          className="min-w-0 flex-1 rounded-lg border border-[#bcd9c2] bg-white px-3 py-2 text-sm outline-none focus:border-green-600"
+          className="min-w-0 flex-1 rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
         />
         <button
           type="submit"
           disabled={pending}
-          className="shrink-0 rounded-lg bg-green-600 text-white px-3 py-2 text-sm font-semibold hover:bg-green-500 disabled:opacity-50"
+          className="shrink-0 rounded-lg bg-accent text-white px-3 py-2 text-sm font-semibold hover:bg-accent-strong disabled:opacity-50"
         >
           {pending ? "…" : "Parier"}
         </button>
@@ -44,14 +44,14 @@ export function PredictionForm({
         <p
           className={`rounded-lg px-3 py-2 text-xs ${
             !result.ok
-              ? "bg-[#fde9e6] text-red-700"
+              ? "bg-danger-soft text-danger"
               : result.title.includes("Commission")
-                ? "bg-[#fdf1dc] text-amber-800"
-                : "bg-[#dcf5e0] text-green-800"
+                ? "bg-warn-soft text-warn"
+                : "bg-accent-soft text-accent-strong"
           }`}
         >
           <span className="font-semibold">{result.title}</span>
-          {result.detail && <span className="block text-[#5c7263]">{result.detail}</span>}
+          {result.detail && <span className="block text-muted">{result.detail}</span>}
         </p>
       )}
     </div>

@@ -1,14 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#14532d"/>
-  <circle cx="256" cy="256" r="180" fill="none" stroke="#166534" stroke-width="8"/>
-  <line x1="76" y1="256" x2="436" y2="256" stroke="#166534" stroke-width="8"/>
-  <!-- trophée -->
-  <path d="M176 128h160v72a80 80 0 0 1-160 0z" fill="#facc15"/>
-  <path d="M176 140h-36a12 12 0 0 0-12 12c0 44 26 68 60 74l-8-24c-22-8-34-26-34-50h30zM336 140h36a12 12 0 0 1 12 12c0 44-26 68-60 74l8-24c22-8 34-26 34-50h-30z" fill="#eab308"/>
-  <rect x="240" y="272" width="32" height="48" fill="#eab308"/>
-  <rect x="200" y="320" width="112" height="28" rx="6" fill="#facc15"/>
-  <rect x="184" y="348" width="144" height="32" rx="8" fill="#a16207"/>
-  <!-- ballon -->
-  <circle cx="256" cy="428" r="36" fill="#f5f5f4"/>
-  <path d="M256 404l22 16-8 26h-28l-8-26z" fill="#1c1917"/>
+  <rect width="512" height="512" rx="112" fill="#0d8a4a"/>
+  <!-- Trophée au trait, dans l'esprit du jeu d'icônes de l'app -->
+  <g fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M176 128h160v88a80 80 0 0 1-160 0z"/>
+    <path d="M176 152h-40v24a72 72 0 0 0 52 69"/>
+    <path d="M336 152h40v24a72 72 0 0 1-52 69"/>
+    <path d="M256 296v56"/>
+    <path d="M196 384h120"/>
+  </g>
 </svg>
