@@ -2,23 +2,36 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { LucideIcon } from "lucide-react";
+import { CalendarDays, MessageCircle, MoreHorizontal, Trophy } from "@/components/icons";
+
+/** Les icônes vivent ici, côté client : un composant ne traverse pas la
+ *  frontière serveur → client (seules des données sérialisables passent).
+ *  Le serveur envoie donc un nom, pas une icône. */
+const ICONS = {
+  accueil: Trophy,
+  journees: CalendarDays,
+  vestiaire: MessageCircle,
+  plus: MoreHorizontal,
+} as const;
+
+export type TabIcon = keyof typeof ICONS;
 
 /** Onglet de la barre du bas : l'actif se distingue par la couleur d'accent
- *  et un trait plein, sans pastille colorée ni fond. */
+ *  et la graisse, sans pastille ni fond. */
 export function TabLink({
   href,
   label,
-  Icon,
+  icon,
   badge,
 }: {
   href: string;
   label: string;
-  Icon: LucideIcon;
+  icon: TabIcon;
   badge: number;
 }) {
   const pathname = usePathname();
   const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+  const Icon = ICONS[icon];
 
   return (
     <Link

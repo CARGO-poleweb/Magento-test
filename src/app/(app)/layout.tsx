@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { canJudge, getSessionProfile, ROLE_LABELS } from "@/lib/data";
-import { CalendarDays, MessageCircle, MoreHorizontal, Trophy } from "@/components/icons";
-import { TabLink } from "@/components/TabLink";
+import { TabLink, type TabIcon } from "@/components/TabLink";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { supabase, profile } = await getSessionProfile();
@@ -28,11 +27,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (lastRead) unreadQuery = unreadQuery.gt("created_at", lastRead);
   const { count: unread } = await unreadQuery;
 
-  const tabs = [
-    { href: "/", label: "Accueil", Icon: Trophy, badge: 0 },
-    { href: "/journees", label: "Journées", Icon: CalendarDays, badge: 0 },
-    { href: "/vestiaire", label: "Vestiaire", Icon: MessageCircle, badge: unread ?? 0 },
-    { href: "/plus", label: "Plus", Icon: MoreHorizontal, badge: plusBadge },
+  const tabs: { href: string; label: string; icon: TabIcon; badge: number }[] = [
+    { href: "/", label: "Accueil", icon: "accueil", badge: 0 },
+    { href: "/journees", label: "Journées", icon: "journees", badge: 0 },
+    { href: "/vestiaire", label: "Vestiaire", icon: "vestiaire", badge: unread ?? 0 },
+    { href: "/plus", label: "Plus", icon: "plus", badge: plusBadge },
   ];
 
   return (
