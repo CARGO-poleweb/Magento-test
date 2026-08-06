@@ -1,17 +1,28 @@
 import Link from "next/link";
-import { getSessionProfile, ROLE_LABELS } from "@/lib/data";
+import { canJudge, getSessionProfile, ROLE_LABELS } from "@/lib/data";
 import { signOut } from "@/app/actions";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { profile } = await getSessionProfile();
+  const { supabase, profile } = await getSessionProfile();
+
+  // Pastille sur « Plus » : les juges voient d'un coup d'œil, depuis n'importe
+  // quel écran, que des dossiers attendent la Commission.
+  let plusBadge = 0;
+  if (canJudge(profile.role)) {
+    const { count } = await supabase
+      .from("predictions")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "a_examiner");
+    plusBadge = count ?? 0;
+  }
 
   // Navigation resserrée : 3 onglets aujourd'hui, 5 max à terme (le Vestiaire
   // et les Défis prendront les places libres en V1). Tout le reste vit dans
   // « Plus » pour que la barre reste lisible sur mobile.
   const tabs = [
-    { href: "/", label: "Accueil", icon: "🏆" },
-    { href: "/journees", label: "Journées", icon: "📅" },
-    { href: "/plus", label: "Plus", icon: "⋯" },
+    { href: "/", label: "Accueil", icon: "🏆", badge: 0 },
+    { href: "/journees", label: "Journées", icon: "📅", badge: 0 },
+    { href: "/plus", label: "Plus", icon: "⋯", badge: plusBadge },
   ];
 
   return (
@@ -41,10 +52,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link
               key={tab.href}
               href={tab.href}
-              className="flex flex-col items-center gap-0.5 px-2 py-2 text-[11px] text-neutral-400 hover:text-neutral-100"
+              className="relative flex flex-col items-center gap-0.5 px-2 py-2 text-[11px] text-neutral-400 hover:text-neutral-100"
             >
               <span className="text-lg leading-none">{tab.icon}</span>
               {tab.label}
+              {tab.badge > 0 && (
+                <span className="absolute right-1 top-1 rounded-full bg-amber-600 px-1.5 text-[10px] font-bold text-amber-50">
+                  {tab.badge}
+                </span>
+              )}
             </Link>
           ))}
         </div>

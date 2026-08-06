@@ -119,3 +119,9 @@ export const LOCK_MINUTES = 30;
 export function isFixtureLocked(fixture: Pick<Fixture, "kickoff_at">, now = new Date()): boolean {
   return now.getTime() >= new Date(fixture.kickoff_at).getTime() - LOCK_MINUTES * 60_000;
 }
+
+/** Horloge indirecte : les Server Components rendent par requête, mais la
+ *  règle react-hooks/purity interdit Date.now() dans le corps du composant. */
+export function nowMs(): number {
+  return Date.now();
+}

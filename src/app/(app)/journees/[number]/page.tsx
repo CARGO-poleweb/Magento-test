@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PredictionForm } from "@/components/PredictionForm";
 import { formatKickoff, getCurrentSeason, getSessionProfile } from "@/lib/data";
@@ -65,6 +66,10 @@ export default async function JourneePage({ params }: { params: Promise<{ number
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Pas de bouton « retour » navigateur en PWA installée : on le fournit. */}
+      <Link href="/journees" className="text-xs text-neutral-500 hover:text-neutral-300">
+        ← Toutes les journées
+      </Link>
       <header>
         <h1 className="text-xl font-bold">
           Journée {day.number}

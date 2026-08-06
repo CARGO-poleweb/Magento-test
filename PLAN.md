@@ -159,6 +159,17 @@ sondage) · Challenge · API résultats automatiques · palmarès et statistique
    (une ligne par match), les 34 journées se créent en brouillon (J1/J34 multiplex automatique),
    il ne reste qu'à publier chaque semaine ; les coups d'envoi restent corrigeables tant que le
    match n'a pas de résultat (reprogrammations TV).
+6. **Liens intelligents** — principe : chacun ouvre l'app avec *une* intention, et une PWA n'a
+   pas de bouton retour de navigateur. Donc :
+   - l'**Accueil route chaque membre vers sa prochaine action** par des cartes priorisées :
+     pronos manquants avec compteur et heure du 1ᵉʳ verrouillage → journée ; « tu as pris X pts »
+     après clôture → détail de la journée ; dossiers en attente → Commission (juges) ; publier /
+     saisir les résultats → espace Président ; bonus non scellés et mise impayée avec compte à
+     rebours J−x avant le 30/09 → pages concernées ;
+   - **pastille** sur l'onglet « Plus » pour les juges (dossiers à traiter, visible de partout) ;
+   - **lien retour** explicite sur les écrans profonds (détail de journée) ;
+   - en V1, le Vestiaire et les Défis ajouteront leurs pastilles (messages non lus, vote vidéo
+     à faire avant 48 h).
 
 ## 5. Points à trancher avec le Bureau
 

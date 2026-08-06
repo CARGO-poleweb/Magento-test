@@ -1,14 +1,14 @@
 import Link from "next/link";
-import { getSessionProfile } from "@/lib/data";
-import { standings } from "@/lib/scoring";
-import type {
-  Fixture,
-  Matchday,
-  PointAdjustment,
-  Prediction,
-  Profile,
-  Season,
-} from "@/lib/types";
+import { canJudge, formatKickoff, getSessionProfile } from "@/lib/data";
+import { matchdayBreakdown, standings } from "@/lib/scoring";
+import { isFixtureLocked, LOCK_MINUTES, nowMs, type Fixture, type HiddenBonus, type Matchday, type PointAdjustment, type Prediction, type Profile, type Season } from "@/lib/types";
+
+/** Carte d'action de l'Accueil : chacun est routé vers sa prochaine action. */
+type ActionCard = {
+  href: string;
+  tone: "green" | "amber" | "neutral";
+  text: React.ReactNode;
+};
 
 export default async function ClassementPage({
   searchParams,
@@ -74,9 +74,203 @@ export default async function ClassementPage({
   const medals = ["🥇", "🥈", "🥉"];
   const isArchive = !viewedSeason.is_current;
 
-  const nextDay = isArchive
-    ? undefined
-    : days.filter((d) => d.status === "publiee").sort((a, b) => a.number - b.number)[0];
+  // -------------------------------------------------------------------------
+  // Cartes d'action : la prochaine action de CE membre, dans l'ordre de ce qui
+  // presse le plus. (Uniquement sur la saison en cours, pas les archives.)
+  // -------------------------------------------------------------------------
+  const cards: ActionCard[] = [];
+  const now = nowMs();
+
+  if (!isArchive) {
+    const myPreds = preds.filter((p) => p.member_id === profile.id);
+
+    // 1. Pronostics : journée ouverte avec des matchs encore jouables.
+    const openDay = days
+      .filter((d) => d.status === "publiee")
+      .sort((a, b) => a.number - b.number)
+      .find((d) => d.fixtures.some((f) => !isFixtureLocked(f)));
+    if (openDay) {
+      const missing = openDay.fixtures
+        .filter((f) => !isFixtureLocked(f))
+        .filter((f) => !myPreds.some((p) => p.fixture_id === f.id));
+      if (missing.length > 0) {
+        const nextLock = Math.min(...missing.map((f) => new Date(f.kickoff_at).getTime()));
+        cards.push({
+          href: `/journees/${openDay.number}`,
+          tone: "green",
+          text: (
+            <>
+              ⚽ <b>Journée {openDay.number}</b> — il te reste{" "}
+              <b>
+                {missing.length} prono{missing.length > 1 ? "s" : ""}
+              </b>{" "}
+              · 1ᵉʳ verrouillage{" "}
+              {formatKickoff(new Date(nextLock - LOCK_MINUTES * 60_000).toISOString())} →
+            </>
+          ),
+        });
+      } else {
+        cards.push({
+          href: `/journees/${openDay.number}`,
+          tone: "neutral",
+          text: (
+            <>
+              ✅ <b>Journée {openDay.number}</b> — tes pronos sont posés, va mater ceux des
+              copains →
+            </>
+          ),
+        });
+      }
+    } else {
+      // Journée entièrement verrouillée mais pas clôturée : on suit les points.
+      const liveDay = days
+        .filter((d) => d.status === "publiee")
+        .sort((a, b) => b.number - a.number)[0];
+      if (liveDay) {
+        cards.push({
+          href: `/journees/${liveDay.number}`,
+          tone: "neutral",
+          text: (
+            <>
+              📺 <b>Journée {liveDay.number}</b> en cours — suis les points en direct →
+            </>
+          ),
+        });
+      }
+    }
+
+    // 2. Résultat de la dernière journée clôturée : « combien j'ai pris ? »
+    const lastFinished = days
+      .filter((d) => d.status === "terminee")
+      .sort((a, b) => b.number - a.number)[0];
+    if (lastFinished) {
+      const b = matchdayBreakdown(lastFinished.fixtures, myPreds, { finished: true });
+      cards.push({
+        href: `/journees/${lastFinished.number}`,
+        tone: b.total > 0 ? "neutral" : "amber",
+        text: (
+          <>
+            🏁 <b>Journée {lastFinished.number}</b> terminée : tu as pris{" "}
+            <b>{b.total} pt{Math.abs(b.total) > 1 ? "s" : ""}</b>
+            {b.allExact && " (tous les scores, +10 !)"}
+            {b.blankDay && " (journée blanche, −2…)"} →
+          </>
+        ),
+      });
+    }
+
+    // 3. Commission : les juges voient ce qui les attend.
+    if (canJudge(profile.role)) {
+      const { count } = await supabase
+        .from("predictions")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "a_examiner");
+      if ((count ?? 0) > 0) {
+        cards.push({
+          href: "/commission",
+          tone: "amber",
+          text: (
+            <>
+              ⚖️ <b>{count} dossier{(count ?? 0) > 1 ? "s" : ""}</b> attend
+              {(count ?? 0) > 1 ? "ent" : ""} la Commission →
+            </>
+          ),
+        });
+      }
+    }
+
+    // 4. Président : sa prochaine action de gestion.
+    if (profile.role === "president") {
+      const { data: drafts } = await supabase
+        .from("matchdays")
+        .select("number, fixtures(id)")
+        .eq("season_id", viewedSeason.id)
+        .eq("status", "brouillon")
+        .order("number")
+        .limit(1);
+      const draft = drafts?.[0];
+      const toClose = days
+        .filter((d) => d.status === "publiee")
+        .find((d) => d.fixtures.every((f) => new Date(f.kickoff_at).getTime() < now));
+      if (toClose) {
+        const missingResults = toClose.fixtures.filter((f) => f.home_score === null).length;
+        cards.push({
+          href: "/admin",
+          tone: "amber",
+          text: (
+            <>
+              🎩 <b>Journée {toClose.number}</b> :{" "}
+              {missingResults > 0
+                ? `${missingResults} résultat${missingResults > 1 ? "s" : ""} à saisir`
+                : "tout est saisi, clôture-la"}{" "}
+              →
+            </>
+          ),
+        });
+      } else if (draft && (draft.fixtures?.length ?? 0) > 0) {
+        cards.push({
+          href: "/admin",
+          tone: "green",
+          text: (
+            <>
+              🎩 <b>Journée {draft.number}</b> prête — publie-la pour ouvrir les pronos
+              (article 10) →
+            </>
+          ),
+        });
+      }
+    }
+
+    // 5. Échéances du 30/09 : bonus cachés et mise.
+    const deadline = new Date(viewedSeason.bonus_deadline).getTime();
+    if (!viewedSeason.bonus_reveles && now < deadline) {
+      const [{ data: myBonuses }, { data: myMises }] = await Promise.all([
+        supabase
+          .from("hidden_bonuses")
+          .select("type")
+          .eq("season_id", viewedSeason.id)
+          .eq("member_id", profile.id),
+        supabase
+          .from("ledger")
+          .select("id")
+          .eq("season_id", viewedSeason.id)
+          .eq("member_id", profile.id)
+          .eq("type", "mise")
+          .limit(1),
+      ]);
+      const daysLeft = Math.ceil((deadline - now) / 86_400_000);
+      const missingBonuses = 6 - ((myBonuses ?? []) as Pick<HiddenBonus, "type">[]).length;
+      if (missingBonuses > 0) {
+        cards.push({
+          href: "/bonus",
+          tone: daysLeft <= 7 ? "amber" : "neutral",
+          text: (
+            <>
+              🎁 <b>{missingBonuses} bonus caché{missingBonuses > 1 ? "s" : ""}</b> à sceller —
+              J−{daysLeft} →
+            </>
+          ),
+        });
+      }
+      if ((myMises ?? []).length === 0) {
+        cards.push({
+          href: "/cagnotte",
+          tone: daysLeft <= 7 ? "amber" : "neutral",
+          text: (
+            <>
+              💰 Mise de 20 € à régler avant le 30/09 — article 3 : radiation sinon ! →
+            </>
+          ),
+        });
+      }
+    }
+  }
+
+  const TONE_CLASSES: Record<ActionCard["tone"], string> = {
+    green: "border-green-900 bg-green-950/40 hover:bg-green-950/70",
+    amber: "border-amber-900/70 bg-amber-950/30 hover:bg-amber-950/50",
+    neutral: "border-neutral-800 bg-neutral-900/50 hover:bg-neutral-900",
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -105,14 +299,18 @@ export default async function ClassementPage({
         </p>
       )}
 
-      {nextDay && (
-        <Link
-          href={`/journees/${nextDay.number}`}
-          className="rounded-xl border border-green-900 bg-green-950/40 p-4 text-sm hover:bg-green-950/70"
-        >
-          ⚽ <span className="font-semibold">Journée {nextDay.number}</span>
-          {nextDay.type === "multiplex" && " (MULTIPLEX)"} — journée en cours, à toi de jouer →
-        </Link>
+      {cards.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {cards.map((card, i) => (
+            <Link
+              key={i}
+              href={card.href}
+              className={`rounded-xl border p-4 text-sm ${TONE_CLASSES[card.tone]}`}
+            >
+              {card.text}
+            </Link>
+          ))}
+        </div>
       )}
 
       <section>
