@@ -11,7 +11,9 @@ import {
   revealBonuses,
   saveSeasonTeams,
   setRadiation,
+  updateKickoff,
 } from "@/app/actions";
+import { ImportCalendarForm } from "@/components/ImportCalendarForm";
 import { formatKickoff, getCurrentSeason, getSessionProfile } from "@/lib/data";
 import type { Fixture, Matchday, Profile, Season, Team } from "@/lib/types";
 
@@ -80,7 +82,24 @@ export default async function AdminPage() {
 
       {season && (
         <section className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
-          <h2 className="mb-2 font-bold">Créer une journée · {season.name}</h2>
+          <h2 className="mb-1 font-bold">Importer le calendrier · {season.name}</h2>
+          <p className="mb-2 text-xs text-neutral-500">
+            Le calendrier de la Ligue 1 est connu à l’avance : collez-le une fois pour toute la
+            saison, une ligne par match au format{" "}
+            <code className="rounded bg-neutral-800 px-1">
+              journée ; DOMICILE ; EXTÉRIEUR ; jj/mm/aaaa hh:mm
+            </code>{" "}
+            (heure de Paris). Les journées sont créées en brouillon — il ne restera qu’à publier
+            chaque semaine et corriger les horaires quand la TV les déplace. J1 et J34 passent
+            automatiquement en multiplex.
+          </p>
+          <ImportCalendarForm />
+        </section>
+      )}
+
+      {season && (
+        <section className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
+          <h2 className="mb-2 font-bold">Créer une journée à la main · {season.name}</h2>
           <form action={createMatchday} className="flex gap-2">
             <input
               name="number"
@@ -148,7 +167,30 @@ export default async function AdminPage() {
                     {teamById.get(f.home_team_id)?.short_name} vs{" "}
                     {teamById.get(f.away_team_id)?.short_name}
                   </span>
-                  <span className="text-xs text-neutral-500">{formatKickoff(f.kickoff_at)}</span>
+                  {f.home_score !== null ? (
+                    <span className="text-xs text-neutral-500">{formatKickoff(f.kickoff_at)}</span>
+                  ) : (
+                    <details className="text-xs text-neutral-500">
+                      <summary
+                        className="cursor-pointer list-none hover:text-neutral-300"
+                        title="Corriger le coup d'envoi (reprogrammation TV)"
+                      >
+                        🕓 {formatKickoff(f.kickoff_at)}
+                      </summary>
+                      <form action={updateKickoff} className="mt-1 flex items-center gap-1">
+                        <input type="hidden" name="fixture_id" value={f.id} />
+                        <input
+                          name="kickoff_at"
+                          type="datetime-local"
+                          required
+                          className="rounded border border-neutral-700 bg-neutral-900 px-1 py-0.5 text-xs"
+                        />
+                        <button className="rounded bg-neutral-700 px-2 py-0.5 text-xs hover:bg-neutral-600">
+                          OK
+                        </button>
+                      </form>
+                    </details>
+                  )}
                   {f.home_score !== null ? (
                     <span className="rounded bg-neutral-800 px-2 py-0.5 font-mono text-xs font-bold">
                       {f.home_score}-{f.away_score}

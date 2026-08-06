@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { parsePrediction } from "@/lib/parser";
+import { matchTeam, parsePrediction } from "@/lib/parser";
 import { canJudge, getCurrentSeason, getSessionProfile } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -271,6 +271,134 @@ function parisToUtc(local: string): string {
     .find((p) => p.type === "timeZoneName")?.value; // ex. « GMT+02:00 »
   const offset = paris?.match(/GMT([+-]\d{2}:\d{2})/)?.[1] ?? "+02:00";
   return new Date(`${local}:00${offset}`).toISOString();
+}
+
+/**
+ * Import du calendrier complet en un seul geste : une ligne par match,
+ * `journée ; DOMICILE ; EXTÉRIEUR ; jj/mm/aaaa hh:mm` (heure de Paris).
+ * Les journées sont créées en brouillon — le Président n'a plus qu'à publier
+ * chaque semaine. J1 et J34 passent automatiquement en multiplex.
+ * Tout ou rien : la moindre ligne invalide annule l'import.
+ */
+export async function importCalendar(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { profile } = await getSessionProfile();
+  if (profile.role !== "president") return { ok: false, title: "Réservé au Président (article 1)" };
+
+  const raw = String(formData.get("calendar") ?? "").trim();
+  if (!raw) return { ok: false, title: "Rien à importer" };
+
+  const service = createServiceClient();
+  const season = await getCurrentSeason(service);
+  if (!season) return { ok: false, title: "Aucune saison en cours" };
+
+  const [{ data: seasonTeams }, { data: existingDays }] = await Promise.all([
+    service.from("season_teams").select("team:team_id(*)").eq("season_id", season.id),
+    service.from("matchdays").select("number").eq("season_id", season.id),
+  ]);
+  const teams = (seasonTeams ?? []).map((st) => st.team) as unknown as Team[];
+  const existingNumbers = new Set((existingDays ?? []).map((d) => d.number));
+
+  type Row = { number: number; homeId: number; awayId: number; kickoffUtc: string };
+  const rows: Row[] = [];
+  const errors: string[] = [];
+
+  raw.split(/\r?\n/).forEach((line, i) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    const err = (msg: string) => errors.push(`ligne ${i + 1} : ${msg}`);
+
+    const parts = trimmed.split(";").map((p) => p.trim());
+    if (parts.length !== 4) {
+      return err("format attendu « journée ; DOMICILE ; EXTÉRIEUR ; jj/mm/aaaa hh:mm »");
+    }
+    const [numStr, homeStr, awayStr, dateStr] = parts;
+
+    const number = Number(numStr);
+    if (!Number.isInteger(number) || number < 1 || number > 34) return err(`journée « ${numStr} » invalide`);
+    if (existingNumbers.has(number)) return err(`la journée ${number} existe déjà dans l'app`);
+
+    const home = matchTeam(homeStr, teams);
+    const away = matchTeam(awayStr, teams);
+    if (home.kind !== "exact") return err(`équipe domicile « ${homeStr} » non reconnue`);
+    if (away.kind !== "exact") return err(`équipe extérieure « ${awayStr} » non reconnue`);
+    if (home.team.id === away.team.id) return err("une équipe ne joue pas contre elle-même");
+
+    const m = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2})[h:](\d{2})$/);
+    if (!m) return err(`date « ${dateStr} » invalide (attendu jj/mm/aaaa hh:mm)`);
+    const [, dd, mo, yyyy, hh, mi] = m;
+    const local = `${yyyy}-${mo}-${dd}T${hh.padStart(2, "0")}:${mi}`;
+    if (isNaN(new Date(`${local}:00Z`).getTime())) return err(`date « ${dateStr} » invalide`);
+
+    rows.push({ number, homeId: home.team.id, awayId: away.team.id, kickoffUtc: parisToUtc(local) });
+  });
+
+  if (errors.length > 0) {
+    return {
+      ok: false,
+      title: `Import annulé — ${errors.length} erreur${errors.length > 1 ? "s" : ""}`,
+      detail: errors.slice(0, 5).join(" · ") + (errors.length > 5 ? " · …" : ""),
+    };
+  }
+  if (rows.length === 0) return { ok: false, title: "Rien à importer" };
+
+  const byNumber = new Map<number, Row[]>();
+  for (const row of rows) {
+    const list = byNumber.get(row.number) ?? [];
+    list.push(row);
+    byNumber.set(row.number, list);
+  }
+
+  for (const [number, dayRows] of [...byNumber.entries()].sort((a, b) => a[0] - b[0])) {
+    const { data: day, error } = await service
+      .from("matchdays")
+      .insert({
+        season_id: season.id,
+        number,
+        type: number === 1 || number === 34 ? "multiplex" : "classique",
+      })
+      .select("id")
+      .single();
+    if (error || !day) return { ok: false, title: `Erreur à la création de la journée ${number}` };
+
+    const { error: fxError } = await service.from("fixtures").insert(
+      dayRows.map((row, idx) => ({
+        matchday_id: day.id,
+        position: idx + 1,
+        home_team_id: row.homeId,
+        away_team_id: row.awayId,
+        kickoff_at: row.kickoffUtc,
+      })),
+    );
+    if (fxError) return { ok: false, title: `Erreur sur les matchs de la journée ${number}`, detail: fxError.message };
+  }
+
+  revalidatePath("/admin");
+  return {
+    ok: true,
+    title: `Calendrier importé ✅`,
+    detail: `${byNumber.size} journée${byNumber.size > 1 ? "s" : ""} créée${byNumber.size > 1 ? "s" : ""} en brouillon (${rows.length} matchs). Il ne reste qu'à publier chaque semaine.`,
+  };
+}
+
+/** Les horaires TV bougent en cours de saison : le Président peut corriger un
+ *  coup d'envoi tant que le match n'a pas de résultat. */
+export async function updateKickoff(formData: FormData): Promise<void> {
+  await requirePresident();
+  const fixtureId = Number(formData.get("fixture_id"));
+  const kickoffLocal = String(formData.get("kickoff_at") ?? "");
+  if (!fixtureId || !kickoffLocal) return;
+
+  const service = createServiceClient();
+  await service
+    .from("fixtures")
+    .update({ kickoff_at: parisToUtc(kickoffLocal) })
+    .eq("id", fixtureId)
+    .is("home_score", null);
+  revalidatePath("/admin");
+  revalidatePath("/journees");
 }
 
 export async function publishMatchday(formData: FormData): Promise<void> {

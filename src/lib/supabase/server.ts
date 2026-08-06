@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { SESSION_COOKIE_MAX_AGE } from "./client";
 
 /** Client Supabase côté serveur, au nom de l'utilisateur connecté (RLS). */
 export async function createClient() {
@@ -9,6 +10,7 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: { maxAge: SESSION_COOKIE_MAX_AGE },
       cookies: {
         getAll() {
           return cookieStore.getAll();

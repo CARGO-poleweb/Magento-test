@@ -1,17 +1,17 @@
 import Link from "next/link";
-import { canJudge, getSessionProfile, ROLE_LABELS } from "@/lib/data";
+import { getSessionProfile, ROLE_LABELS } from "@/lib/data";
 import { signOut } from "@/app/actions";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile } = await getSessionProfile();
 
+  // Navigation resserrée : 3 onglets aujourd'hui, 5 max à terme (le Vestiaire
+  // et les Défis prendront les places libres en V1). Tout le reste vit dans
+  // « Plus » pour que la barre reste lisible sur mobile.
   const tabs = [
-    { href: "/", label: "Classement", icon: "🏆" },
+    { href: "/", label: "Accueil", icon: "🏆" },
     { href: "/journees", label: "Journées", icon: "📅" },
-    { href: "/bonus", label: "Bonus", icon: "🎁" },
-    { href: "/cagnotte", label: "Cagnotte", icon: "💰" },
-    ...(canJudge(profile.role) ? [{ href: "/commission", label: "Commission", icon: "⚖️" }] : []),
-    ...(profile.role === "president" ? [{ href: "/admin", label: "Président", icon: "🎩" }] : []),
+    { href: "/plus", label: "Plus", icon: "⋯" },
   ];
 
   return (

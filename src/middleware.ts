@@ -8,6 +8,9 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // Session « à vie » : le passage dans le middleware rafraîchit le jeton
+      // et repousse l'expiration du cookie à 400 jours (le max navigateur).
+      cookieOptions: { maxAge: 400 * 24 * 60 * 60 },
       cookies: {
         getAll() {
           return request.cookies.getAll();

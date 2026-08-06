@@ -145,7 +145,22 @@ sondage) · Challenge · API résultats automatiques · palmarès et statistique
 
 ---
 
-## 4. Points à trancher avec le Bureau
+## 4. Décisions d'ergonomie (actées avec le porteur du projet)
+
+1. **Saisie libre conservée telle quelle** — pas d'assistance de saisie, le folklore prime.
+2. **Session « à vie »** — cookies portés au maximum navigateur (400 jours) et renouvelés à
+   chaque visite : on ne se reconnecte que si on clique sur « Se déconnecter ».
+3. **Installation PWA expliquée manuellement** — geste à faire une fois, pas d'onboarding dédié.
+4. **Navigation resserrée** — 3 onglets aujourd'hui (Accueil, Journées, Plus), 5 max à terme :
+   le Vestiaire (chat) et les Défis (photos/vidéos) prendront les places libres en V1 ; bonus,
+   cagnotte, Commission et espace Président vivent dans « Plus », avec pastille des dossiers en
+   attente pour les juges.
+5. **Import du calendrier en un geste** — le Président colle le calendrier complet de la saison
+   (une ligne par match), les 34 journées se créent en brouillon (J1/J34 multiplex automatique),
+   il ne reste qu'à publier chaque semaine ; les coups d'envoi restent corrigeables tant que le
+   match n'a pas de résultat (reprogrammations TV).
+
+## 5. Points à trancher avec le Bureau
 
 1. **Saisie libre confirmée** : les fautes des articles 6, 7 et 8 restent possibles — l'app
    enregistre le texte brut sans correction, détecte les anomalies et les transmet à la
