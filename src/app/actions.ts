@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { sendPush } from "@/lib/push";
@@ -915,6 +916,70 @@ export async function setRadiation(formData: FormData): Promise<void> {
   const service = createServiceClient();
   await service.from("profiles").update({ is_radie: radie }).eq("id", memberId);
   revalidatePath("/admin");
+}
+
+/**
+ * Fabrique un lien de connexion à coller dans un e-mail : le destinataire
+ * clique une fois et il est dans l'app, sans mot de passe ni copier-coller de
+ * code. On génère nous-mêmes le `token_hash` (plutôt que d'utiliser le lien
+ * Supabase brut) pour retomber sur /auth/confirm, qui sait déjà l'échanger
+ * contre une session. Le lien expire selon le réglage « Email OTP expiration »
+ * du projet Supabase — à porter à 24 h pour un envoi tranquille.
+ */
+export async function createInviteLink(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { profile } = await getSessionProfile();
+  if (profile.role !== "president") return { ok: false, title: "Réservé au Président (article 1)" };
+
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const displayName = String(formData.get("display_name") ?? "").trim();
+  if (!email.includes("@")) return { ok: false, title: "Adresse e-mail invalide" };
+
+  const head = await headers();
+  const host = head.get("x-forwarded-host") ?? head.get("host");
+  if (!host) return { ok: false, title: "Adresse du site introuvable" };
+  const origin = `${head.get("x-forwarded-proto") ?? "https"}://${host}`;
+  const redirectTo = `${origin}/auth/confirm`;
+
+  const service = createServiceClient();
+
+  // Membre connu → simple lien de connexion. Inconnu → invitation (le compte
+  // et le profil sont créés au passage par le trigger on_auth_user_created).
+  const existing = await service.auth.admin.generateLink({
+    type: "magiclink",
+    email,
+    options: { redirectTo },
+  });
+  let properties = existing.data?.properties;
+  let created = false;
+  if (!properties) {
+    const invited = await service.auth.admin.generateLink({
+      type: "invite",
+      email,
+      options: {
+        redirectTo,
+        data: displayName ? { display_name: displayName } : undefined,
+      },
+    });
+    if (!invited.data?.properties) {
+      return {
+        ok: false,
+        title: "Lien impossible à générer",
+        detail: (invited.error ?? existing.error)?.message,
+      };
+    }
+    properties = invited.data.properties;
+    created = true;
+  }
+
+  const link = `${origin}/auth/confirm?token_hash=${properties.hashed_token}&type=${properties.verification_type}&next=%2F`;
+  return {
+    ok: true,
+    title: created ? `Invitation prête pour ${email}` : `Lien de connexion prêt pour ${email}`,
+    detail: link,
+  };
 }
 
 export async function revealBonuses(): Promise<void> {
