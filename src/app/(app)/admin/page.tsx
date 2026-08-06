@@ -81,7 +81,10 @@ export default async function AdminPage() {
     </select>
   );
 
-  const DayCard = ({ day }: { day: Matchday & { fixtures: Fixture[] } }) => (
+  const DayCard = ({ day }: { day: Matchday & { fixtures: Fixture[] } }) => {
+    // La clôture déclenche le +3, le +10 et le −2 : elle exige tous les scores.
+    const missing = day.fixtures.filter((f) => f.home_score === null).length;
+    return (
     <section className="rounded-card border border-line bg-surface p-4 shadow-[0_2px_8px_-4px_rgba(18,33,26,0.12)]">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="font-bold">
@@ -100,17 +103,22 @@ export default async function AdminPage() {
               </button>
             </form>
           )}
-          {day.status === "publiee" && (
-            <form action={finishMatchday}>
-              <input type="hidden" name="matchday_id" value={day.id} />
-              <button
-                className="rounded-lg bg-subtle px-3 py-1.5 text-xs font-semibold hover:bg-line"
-                title="Possible uniquement quand tous les résultats sont saisis"
+          {day.status === "publiee" &&
+            (missing > 0 ? (
+              <span
+                className="rounded-lg bg-subtle px-3 py-1.5 text-xs font-semibold text-faint"
+                title="La clôture fait tomber le +3, le +10 et le −2 : elle attend tous les scores."
               >
-                Clôturer
-              </button>
-            </form>
-          )}
+                {missing} résultat{missing > 1 ? "s" : ""} à saisir
+              </span>
+            ) : (
+              <form action={finishMatchday}>
+                <input type="hidden" name="matchday_id" value={day.id} />
+                <button className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white transition-transform hover:bg-accent-strong active:scale-95">
+                  Clôturer
+                </button>
+              </form>
+            ))}
         </div>
       </div>
 
@@ -197,7 +205,8 @@ export default async function AdminPage() {
         </form>
       )}
     </section>
-  );
+    );
+  };
 
   return (
     <div className="flex flex-col gap-6">
