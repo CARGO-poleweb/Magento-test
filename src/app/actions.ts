@@ -5,6 +5,13 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { sendPush } from "@/lib/push";
 import { looksLikePrediction, matchTeam, parsePrediction } from "@/lib/parser";
+import {
+  fetchSeasonMatches,
+  hasFootballDataToken,
+  planFixtures,
+  planResults,
+  seasonStartYear,
+} from "@/lib/footballData";
 import { canJudge, getCurrentSeason, getSessionProfile } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -544,6 +551,221 @@ export async function importCalendar(
     title: `Calendrier importé ✅`,
     detail: `${byNumber.size} journée${byNumber.size > 1 ? "s" : ""} créée${byNumber.size > 1 ? "s" : ""} en brouillon (${rows.length} matchs). Il ne reste qu'à publier chaque semaine.`,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Synchronisation football-data.org : calendrier et résultats
+// ---------------------------------------------------------------------------
+
+/** Importe (ou met à jour) le calendrier de la saison depuis l'API. */
+export async function importSeasonFromApi(): Promise<ActionResult> {
+  const { profile } = await getSessionProfile();
+  if (profile.role !== "president") return { ok: false, title: "Réservé au Président (article 1)" };
+  if (!hasFootballDataToken()) {
+    return {
+      ok: false,
+      title: "Aucune clé football-data.org",
+      detail: "Ajoutez FOOTBALL_DATA_TOKEN dans Vercel, puis redéployez.",
+    };
+  }
+
+  const service = createServiceClient();
+  const season = await getCurrentSeason(service);
+  if (!season) return { ok: false, title: "Aucune saison en cours" };
+
+  const year = seasonStartYear(season.name);
+  if (!year) {
+    return {
+      ok: false,
+      title: "Millésime illisible",
+      detail: `Le nom « ${season.name} » doit contenir l'année de départ, ex. « Ligue 1 2026-2027 ».`,
+    };
+  }
+
+  let matches;
+  try {
+    matches = await fetchSeasonMatches(year);
+  } catch (error) {
+    return { ok: false, title: "Appel à football-data.org impossible", detail: String((error as Error).message) };
+  }
+
+  const [{ data: teamsData }, { data: seasonTeams }] = await Promise.all([
+    service.from("teams").select("*"),
+    service.from("season_teams").select("team_id, tracked").eq("season_id", season.id),
+  ]);
+  const teams = (teamsData ?? []) as Team[];
+  const tracked = new Set(
+    (seasonTeams ?? []).filter((t) => t.tracked).map((t) => t.team_id as number),
+  );
+  if (tracked.size === 0) {
+    return {
+      ok: false,
+      title: "Aucune équipe concernée",
+      detail: "Cochez d'abord les équipes concernées (★) de la saison.",
+    };
+  }
+
+  const { planned, unresolved } = planFixtures(matches, teams, tracked);
+  if (planned.length === 0) {
+    return {
+      ok: false,
+      title: "Rien à importer",
+      detail: unresolved.length > 0 ? `Clubs non reconnus : ${unresolved.join(", ")}` : undefined,
+    };
+  }
+
+  const { data: existingDays } = await service
+    .from("matchdays")
+    .select("id, number, status, fixtures(id, home_team_id, away_team_id, home_score)")
+    .eq("season_id", season.id);
+  const byNumber = new Map(
+    ((existingDays ?? []) as {
+      id: number;
+      number: number;
+      status: string;
+      fixtures: { id: number; home_team_id: number; away_team_id: number; home_score: number | null }[];
+    }[]).map((d) => [d.number, d]),
+  );
+
+  const grouped = new Map<number, typeof planned>();
+  for (const f of planned) {
+    const list = grouped.get(f.matchdayNumber) ?? [];
+    list.push(f);
+    grouped.set(f.matchdayNumber, list);
+  }
+
+  let created = 0;
+  let rescheduled = 0;
+  for (const [number, dayFixtures] of [...grouped.entries()].sort((a, b) => a[0] - b[0])) {
+    const existing = byNumber.get(number);
+
+    if (!existing) {
+      const { data: day, error } = await service
+        .from("matchdays")
+        .insert({ season_id: season.id, number, type: dayFixtures[0].type })
+        .select("id")
+        .single();
+      if (error || !day) continue;
+      await service.from("fixtures").insert(
+        dayFixtures.map((f, i) => ({
+          matchday_id: day.id,
+          position: i + 1,
+          home_team_id: f.homeTeamId,
+          away_team_id: f.awayTeamId,
+          kickoff_at: f.kickoffUtc,
+        })),
+      );
+      created += 1;
+      continue;
+    }
+
+    // Journée déjà connue : on ne recrée rien, on rafraîchit seulement les
+    // coups d'envoi des matchs pas encore joués (reprogrammations TV).
+    for (const f of dayFixtures) {
+      const fixture = existing.fixtures.find(
+        (x) => x.home_team_id === f.homeTeamId && x.away_team_id === f.awayTeamId,
+      );
+      if (fixture && fixture.home_score === null) {
+        await service
+          .from("fixtures")
+          .update({ kickoff_at: f.kickoffUtc })
+          .eq("id", fixture.id)
+          .is("home_score", null);
+        rescheduled += 1;
+      }
+    }
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/journees");
+
+  const parts = [
+    created > 0 ? `${created} journée${created > 1 ? "s" : ""} créée${created > 1 ? "s" : ""}` : null,
+    rescheduled > 0 ? `${rescheduled} horaire${rescheduled > 1 ? "s" : ""} mis à jour` : null,
+    unresolved.length > 0 ? `clubs non reconnus : ${unresolved.join(", ")}` : null,
+  ].filter(Boolean);
+
+  return {
+    ok: true,
+    title: "Calendrier synchronisé",
+    detail: parts.length > 0 ? parts.join(" · ") : "Tout était déjà à jour.",
+  };
+}
+
+/** Remplit les scores manquants depuis l'API. Utilisée par le bouton du
+ *  Président et par la tâche planifiée quotidienne. */
+export async function syncResultsFromApi(): Promise<ActionResult> {
+  const service = createServiceClient();
+  if (!hasFootballDataToken()) {
+    return { ok: false, title: "Aucune clé football-data.org" };
+  }
+
+  const season = await getCurrentSeason(service);
+  if (!season) return { ok: false, title: "Aucune saison en cours" };
+  const year = seasonStartYear(season.name);
+  if (!year) return { ok: false, title: "Millésime illisible" };
+
+  let matches;
+  try {
+    matches = await fetchSeasonMatches(year);
+  } catch (error) {
+    return { ok: false, title: "Appel à football-data.org impossible", detail: String((error as Error).message) };
+  }
+
+  const { data: teamsData } = await service.from("teams").select("*");
+  const results = planResults(matches, (teamsData ?? []) as Team[]);
+  if (results.length === 0) return { ok: true, title: "Aucun résultat disponible" };
+
+  const { data: days } = await service
+    .from("matchdays")
+    .select("number, fixtures(id, home_team_id, away_team_id, home_score)")
+    .eq("season_id", season.id);
+
+  const pending = new Map<string, number>();
+  for (const day of (days ?? []) as {
+    number: number;
+    fixtures: { id: number; home_team_id: number; away_team_id: number; home_score: number | null }[];
+  }[]) {
+    for (const f of day.fixtures) {
+      if (f.home_score === null) {
+        pending.set(`${day.number}:${f.home_team_id}:${f.away_team_id}`, f.id);
+      }
+    }
+  }
+
+  let filled = 0;
+  for (const r of results) {
+    const id = pending.get(`${r.matchdayNumber}:${r.homeTeamId}:${r.awayTeamId}`);
+    if (!id) continue;
+    const { error } = await service
+      .from("fixtures")
+      .update({ home_score: r.home, away_score: r.away })
+      .eq("id", id)
+      .is("home_score", null);
+    if (!error) filled += 1;
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+  revalidatePath("/journees");
+
+  return {
+    ok: true,
+    title: filled > 0 ? `${filled} résultat${filled > 1 ? "s" : ""} récupéré${filled > 1 ? "s" : ""}` : "Aucun nouveau résultat",
+    detail: filled > 0 ? "Il ne reste qu'à clôturer la journée quand tout est saisi." : undefined,
+  };
+}
+
+/** Version « formulaire » des deux actions ci-dessus (bouton du Président).
+ *  useActionState transmet l'état précédent : on l'ignore volontairement. */
+export async function importSeasonFromApiForm(): Promise<ActionResult> {
+  return importSeasonFromApi();
+}
+
+export async function syncResultsFromApiForm(): Promise<ActionResult> {
+  const { profile } = await getSessionProfile();
+  if (profile.role !== "president") return { ok: false, title: "Réservé au Président (article 1)" };
+  return syncResultsFromApi();
 }
 
 /** Les horaires TV bougent en cours de saison : le Président peut corriger un
