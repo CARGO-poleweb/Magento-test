@@ -1,13 +1,13 @@
--- Données de départ : saison 2025-2026 (courante) + clubs de Ligue 1.
--- La saison 2026-2027 se prépare directement dans l'app (onglet Président) :
--- création de la saison, sélection des 18 clubs (promus/relégués), choix des
--- 5 équipes concernées, échéances et montants — puis bascule.
+-- Données de départ : saison 2026-2027 (courante) + référentiel des clubs.
+-- La saison suivante se prépare directement dans l'app (onglet Président) :
+-- création, composition (promus/relégués), 5 équipes concernées, échéances.
 
 insert into seasons (name, paiement_deadline, bonus_deadline, is_current)
-values ('Ligue 1 2025-2026', '2025-09-30', '2025-09-30 23:59:59+02', true);
+values ('Ligue 1 2026-2027', '2026-09-30', '2026-09-30 23:59:59+02', true);
 
 -- Référentiel des clubs (les alias servent au parseur : écritures acceptées
--- sans passage en Commission).
+-- sans passage en Commission). NANTES et METZ, relégués à l'été 2026, restent
+-- dans le référentiel pour l'historique et les futures remontées.
 insert into teams (short_name, full_name, aliases) values
   ('TFC',        'Toulouse FC',            '{TOULOUSE,TEFECE}'),
   ('PSG',        'Paris Saint-Germain',    '{"PARIS SG","PARIS SAINT GERMAIN","PARIS SAINT-GERMAIN","PARIS-SG"}'),
@@ -19,25 +19,30 @@ insert into teams (short_name, full_name, aliases) values
   ('NICE',       'OGC Nice',               '{OGCN,"OGC NICE"}'),
   ('LENS',       'RC Lens',                '{RCL,"RC LENS"}'),
   ('STRASBOURG', 'RC Strasbourg Alsace',   '{RCSA,STRASBG}'),
-  ('NANTES',     'FC Nantes',              '{FCN,"FC NANTES"}'),
   ('BREST',      'Stade Brestois 29',      '{SB29}'),
   ('LE HAVRE',   'Le Havre AC',            '{HAC,HAVRE}'),
   ('ANGERS',     'Angers SCO',             '{SCO}'),
   ('AUXERRE',    'AJ Auxerre',             '{AJA,"AJ AUXERRE"}'),
-  ('METZ',       'FC Metz',                '{"FC METZ"}'),
   ('LORIENT',    'FC Lorient',             '{FCL,MERLUS}'),
-  ('PARIS FC',   'Paris FC',               '{PFC}');
+  ('PARIS FC',   'Paris FC',               '{PFC}'),
+  ('TROYES',     'ESTAC Troyes',           '{ESTAC}'),
+  ('LE MANS',    'Le Mans FC',             '{"LE MANS FC",MANS}'),
+  ('NANTES',     'FC Nantes',              '{FCN,"FC NANTES"}'),
+  ('METZ',       'FC Metz',                '{"FC METZ"}');
 
 -- NB : « PARIS » tout seul est volontairement absent des alias — ambigu entre
 -- PSG et PARIS FC (article 7, exemple du règlement). Le parseur le signalera.
 
--- Composition de la Ligue 1 2025-2026 : les 18 clubs, dont les 5 équipes
--- concernées (TFC, PSG, OM + RENNES tirée au sort + MONACO choisie par le
--- vainqueur sortant).
+-- Composition de la Ligue 1 2026-2027 : 18 clubs (montées : TROYES, LE MANS ;
+-- descentes : NANTES, METZ). Équipes concernées cochées : TFC, PSG, OM (fixes
+-- au règlement). Les 2 autres — celle tirée au sort par le Président et celle
+-- choisie par le vainqueur sortant — se cochent dans l'app (★) une fois
+-- connues.
 insert into season_teams (season_id, team_id, tracked)
-select s.id, t.id, t.short_name in ('TFC', 'PSG', 'OM', 'RENNES', 'MONACO')
+select s.id, t.id, t.short_name in ('TFC', 'PSG', 'OM')
 from seasons s, teams t
-where s.name = 'Ligue 1 2025-2026';
+where s.name = 'Ligue 1 2026-2027'
+  and t.short_name not in ('NANTES', 'METZ');
 
 -- Après la première connexion de chacun, attribuez les rôles (« Ne pas oublier ») :
 -- update profiles set role = 'president'            where display_name = 'Greg R.';
