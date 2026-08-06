@@ -4,8 +4,8 @@
   "description": "Ligue 1 2025-2026 — pronostics, bonus cachés et Commission de discipline entre copains",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f5f9f2",
-  "theme_color": "#15803d",
+  "background_color": "#f7f8f6",
+  "theme_color": "#f7f8f6",
   "lang": "fr",
   "icons": [
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },

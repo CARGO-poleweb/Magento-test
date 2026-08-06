@@ -83,28 +83,28 @@ export function NotificationSettings({
   }
 
   return (
-    <div className="rounded-xl border border-[#e2e9dd] bg-white p-4">
-      <h2 className="font-bold">🔔 Notifications</h2>
-      <p className="mt-1 text-xs text-[#75897a]">
+    <div className="rounded-xl border border-line bg-surface p-4">
+      <h2 className="text-sm font-semibold">Notifications</h2>
+      <p className="mt-1 text-xs text-muted">
         Sois prévenu quand une journée est publiée, quand les points tombent, quand la Commission
         tranche — et quand ça cause au Vestiaire.
       </p>
 
       <div className="mt-3">
-        {status === "loading" && <p className="text-xs text-[#8b9c8d]">Vérification…</p>}
+        {status === "loading" && <p className="text-xs text-faint">Vérification…</p>}
         {status === "ios_not_installed" && (
-          <p className="rounded-lg bg-[#fdf1dc] px-3 py-2 text-xs text-amber-700">
+          <p className="rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn">
             Sur iPhone, installe d’abord l’app : Safari → Partager → « Sur l’écran d’accueil »,
             puis reviens ici activer les notifications.
           </p>
         )}
         {status === "unsupported" && (
-          <p className="text-xs text-[#8b9c8d]">
+          <p className="text-xs text-faint">
             Notifications indisponibles sur ce navigateur{!vapidPublicKey && " (clés VAPID non configurées)"}.
           </p>
         )}
         {status === "denied" && (
-          <p className="rounded-lg bg-[#fde9e6] px-3 py-2 text-xs text-red-600">
+          <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">
             Notifications refusées dans les réglages du navigateur — réautorise-les puis reviens.
           </p>
         )}
@@ -112,14 +112,14 @@ export function NotificationSettings({
           <button
             onClick={enable}
             disabled={pending}
-            className="rounded-lg bg-green-600 text-white px-3 py-2 text-sm font-semibold hover:bg-green-500 disabled:opacity-50"
+            className="rounded-lg bg-accent text-white px-3 py-2 text-sm font-semibold hover:bg-accent-strong disabled:opacity-50"
           >
             {pending ? "Activation…" : "Activer les notifications sur cet appareil"}
           </button>
         )}
         {status === "on" && (
           <div className="flex flex-col gap-3">
-            <p className="text-xs text-green-700">✅ Notifications actives sur cet appareil.</p>
+            <p className="text-xs text-accent">Notifications actives sur cet appareil.</p>
             <form action={saveNotificationSettings} className="flex flex-col gap-2 text-sm">
               <label className="flex items-center gap-2">
                 <input type="checkbox" name="jeu" defaultChecked={initialJeu} />
@@ -130,14 +130,14 @@ export function NotificationSettings({
                 Le Vestiaire : chaque message du chat
               </label>
               <div className="flex gap-2">
-                <button className="rounded-lg bg-[#e6eee2] px-3 py-1.5 text-xs font-semibold hover:bg-[#d8e5d2]">
+                <button className="rounded-lg bg-subtle px-3 py-1.5 text-xs font-semibold hover:bg-line">
                   Enregistrer mes préférences
                 </button>
                 <button
                   type="button"
                   onClick={disable}
                   disabled={pending}
-                  className="rounded-lg border border-[#bcd9c2] px-3 py-1.5 text-xs text-[#5c7263] hover:text-[#2a3b30]"
+                  className="rounded-lg border border-line-strong px-3 py-1.5 text-xs text-muted hover:text-ink"
                 >
                   Désactiver sur cet appareil
                 </button>
@@ -145,7 +145,7 @@ export function NotificationSettings({
             </form>
           </div>
         )}
-        {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+        {error && <p className="mt-2 text-xs text-danger">{error}</p>}
       </div>
     </div>
   );

@@ -32,10 +32,9 @@ export default async function VestiairePage() {
   return (
     <div className="flex h-[calc(100dvh-160px)] flex-col gap-2">
       <header>
-        <h1 className="text-xl font-bold">💬 Le Vestiaire</h1>
-        <p className="text-xs text-[#75897a]">
-          La déconne de la ligue, en direct. Les pronostics officiels, eux, se font dans l’onglet
-          📅 Journées (article 11).
+        <h2 className="text-lg font-semibold tracking-tight">Le Vestiaire</h2>
+        <p className="text-xs text-muted">
+          La déconne de la ligue, en direct. Les pronostics officiels, eux, se font dans l’onglet Journées (article 11).
         </p>
       </header>
       <Chat

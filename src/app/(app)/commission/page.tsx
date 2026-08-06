@@ -77,7 +77,7 @@ export default async function CommissionPage() {
   })[];
 
   const FixtureLabel = ({ row }: { row: PredictionRow }) => (
-    <span className="text-xs text-[#75897a]">
+    <span className="text-xs text-muted">
       J{row.fixture?.matchday?.number ?? "?"} · {row.fixture?.home?.short_name} vs{" "}
       {row.fixture?.away?.short_name} · parié le {dateFmt.format(new Date(row.created_at))}
     </span>
@@ -86,8 +86,8 @@ export default async function CommissionPage() {
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="text-xl font-bold">⚖️ Commission de discipline</h1>
-        <p className="text-xs text-[#75897a]">
+        <h2 className="text-lg font-semibold tracking-tight">Commission de discipline</h2>
+        <p className="text-xs text-muted">
           Articles 6, 7 et 8 : la Commission se réserve le droit de ne pas comptabiliser un
           pronostic fautif, ambigu ou en doublon. Le texte brut horodaté fait foi.
         </p>
@@ -99,43 +99,43 @@ export default async function CommissionPage() {
           {pendingRows.map((row) => (
             <article
               key={row.id}
-              className="rounded-xl border border-[#f0d9a8] bg-[#fdf3e0] p-4"
+              className="rounded-xl border border-warn-line bg-warn-soft p-4"
             >
               <p className="text-sm">
                 <span className="font-semibold">{row.member?.display_name ?? "?"}</span> a écrit{" "}
                 <span className="font-mono">« {row.raw_text} »</span>
               </p>
               <FixtureLabel row={row} />
-              <p className="mt-1 text-xs text-amber-700">⚠️ {row.flag_reason}</p>
+              <p className="mt-1 text-xs text-warn">{row.flag_reason}</p>
               <div className="mt-3 flex gap-2">
                 <form action={decidePrediction}>
                   <input type="hidden" name="prediction_id" value={row.id} />
                   <input type="hidden" name="decision" value="comptabilise" />
-                  <button className="rounded-lg bg-green-800 px-3 py-1.5 text-xs font-semibold hover:bg-green-600 text-white">
-                    ✅ Comptabiliser
+                  <button className="rounded-lg bg-green-800 px-3 py-1.5 text-xs font-semibold hover:bg-accent text-white">
+                    Comptabiliser
                   </button>
                 </form>
                 <form action={decidePrediction}>
                   <input type="hidden" name="prediction_id" value={row.id} />
                   <input type="hidden" name="decision" value="non_comptabilise" />
-                  <button className="rounded-lg bg-red-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-red-500">
-                    ❌ Ne pas comptabiliser
+                  <button className="rounded-lg bg-danger text-white px-3 py-1.5 text-xs font-semibold hover:bg-danger">
+                    Ne pas comptabiliser
                   </button>
                 </form>
               </div>
             </article>
           ))}
           {pendingRows.length === 0 && (
-            <p className="rounded-xl border border-[#e2e9dd] p-4 text-sm text-[#75897a]">
+            <p className="rounded-xl border border-line p-4 text-sm text-muted">
               Rien à juger — tout le monde écrit correctement, pour une fois.
             </p>
           )}
         </div>
       </section>
 
-      <section className="rounded-xl border border-[#e2e9dd] bg-white p-4">
+      <section className="rounded-xl border border-line bg-surface p-4">
         <h2 className="mb-1 font-bold">Sanction sur le classement général</h2>
-        <p className="mb-2 text-[11px] text-[#75897a]">
+        <p className="mb-2 text-[11px] text-muted">
           Ex. : message modifié −2 pts (article 12), vidéo d’anniversaire manquée −3 pts (article
           21), vote hors délai −3 pts (article 22), challenge séché −3 pts (article 23), zéro
           évènement −5 pts (article 24). Un bonus du Bureau se saisit en points positifs.
@@ -145,7 +145,7 @@ export default async function CommissionPage() {
             <select
               name="member_id"
               required
-              className="min-w-0 flex-1 rounded-lg border border-[#bcd9c2] bg-white px-2 py-2 text-sm"
+              className="min-w-0 flex-1 rounded-lg border border-line-strong bg-surface px-2 py-2 text-sm"
             >
               <option value="">Membre…</option>
               {members.map((m) => (
@@ -159,11 +159,11 @@ export default async function CommissionPage() {
               type="number"
               required
               placeholder="± pts"
-              className="w-20 rounded-lg border border-[#bcd9c2] bg-white px-2 py-2 text-sm"
+              className="w-20 rounded-lg border border-line-strong bg-surface px-2 py-2 text-sm"
             />
             <select
               name="matchday_id"
-              className="rounded-lg border border-[#bcd9c2] bg-white px-2 py-2 text-sm"
+              className="rounded-lg border border-line-strong bg-surface px-2 py-2 text-sm"
             >
               <option value="">Journée (opt.)</option>
               {days.map((d) => (
@@ -177,9 +177,9 @@ export default async function CommissionPage() {
             name="reason"
             required
             placeholder="Motif (article du règlement…)"
-            className="rounded-lg border border-[#bcd9c2] bg-white px-3 py-2 text-sm"
+            className="rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm"
           />
-          <button className="self-start rounded-lg bg-[#e6eee2] px-3 py-1.5 text-sm font-semibold hover:bg-[#d8e5d2]">
+          <button className="self-start rounded-lg bg-subtle px-3 py-1.5 text-sm font-semibold hover:bg-line">
             Appliquer
           </button>
         </form>
@@ -190,11 +190,11 @@ export default async function CommissionPage() {
           <h2 className="mb-2 font-bold">Casier (dernières décisions)</h2>
           <ul className="flex flex-col gap-1 text-sm">
             {adjRows.map((a) => (
-              <li key={a.id} className="flex justify-between gap-2 text-[#5c7263]">
+              <li key={a.id} className="flex justify-between gap-2 text-muted">
                 <span>
                   {a.member?.display_name ?? "?"} — {a.reason}
                 </span>
-                <span className={a.points < 0 ? "font-bold text-red-600" : "font-bold text-green-700"}>
+                <span className={a.points < 0 ? "font-bold text-danger" : "font-bold text-accent"}>
                   {a.points > 0 ? `+${a.points}` : a.points}
                 </span>
               </li>
@@ -208,15 +208,15 @@ export default async function CommissionPage() {
           <h2 className="mb-2 font-bold">Pronostics déjà jugés</h2>
           <ul className="flex flex-col gap-2 text-sm">
             {decidedRows.map((row) => (
-              <li key={row.id} className="rounded-lg border border-[#e2e9dd] p-2">
+              <li key={row.id} className="rounded-lg border border-line p-2">
                 <span className="font-semibold">{row.member?.display_name}</span>{" "}
                 <span className="font-mono text-xs">« {row.raw_text} »</span>{" "}
                 <span
-                  className={row.status === "comptabilise" ? "text-green-700" : "text-red-600"}
+                  className={row.status === "comptabilise" ? "text-accent" : "text-danger"}
                 >
-                  {row.status === "comptabilise" ? "✅ comptabilisé" : "❌ non comptabilisé"}
+                  {row.status === "comptabilise" ? "comptabilisé" : "non comptabilisé"}
                 </span>
-                <span className="block text-[11px] text-[#8b9c8d]">
+                <span className="block text-[11px] text-faint">
                   par {row.decided?.display_name ?? "?"}
                 </span>
               </li>

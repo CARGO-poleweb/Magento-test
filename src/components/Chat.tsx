@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { AlertTriangle, Paperclip, Send } from "@/components/icons";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { markChatRead, sendMessage, toggleReaction, type ActionResult } from "@/app/actions";
 import { createClient } from "@/lib/supabase/client";
@@ -133,7 +134,7 @@ export function Chat({
     <div className="flex h-full flex-col gap-3">
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
         {messages.length === 0 && (
-          <p className="rounded-xl border border-[#e2e9dd] p-4 text-center text-sm text-[#75897a]">
+          <p className="rounded-xl border border-line p-4 text-center text-sm text-muted">
             Le Vestiaire est ouvert — premier message, première tournée. 🍻
           </p>
         )}
@@ -145,13 +146,13 @@ export function Chat({
               <div
                 className={`max-w-[85%] rounded-2xl border px-3 py-2 text-sm ${
                   mine
-                    ? "rounded-br-sm border-[#bfe8ca] bg-[#dcf5e0]"
-                    : "rounded-bl-sm border-[#e2e9dd] bg-white"
+                    ? "rounded-br-sm border-accent-line bg-accent-soft"
+                    : "rounded-bl-sm border-line bg-surface"
                 }`}
               >
-                <p className="text-[10px] font-bold text-green-600">
+                <p className="text-[10px] font-bold text-accent">
                   {memberNames[m.member_id] ?? "?"}
-                  <span className="ml-2 font-normal text-[#8b9c8d]">
+                  <span className="ml-2 font-normal text-faint">
                     {timeFmt.format(new Date(m.created_at))}
                   </span>
                 </p>
@@ -177,9 +178,9 @@ export function Chat({
                         onClick={() => react(m.id, emoji)}
                         className={`rounded-full px-1.5 py-0.5 text-[11px] ${
                           entry?.mine
-                            ? "bg-[#bfe8ca]"
+                            ? "bg-accent-line"
                             : entry
-                              ? "bg-[#eef2ea]"
+                              ? "bg-subtle"
                               : "opacity-30 hover:opacity-100"
                         }`}
                         title={entry?.mine ? "Retirer ma réaction" : "Réagir"}
@@ -192,9 +193,9 @@ export function Chat({
                 </div>
               </div>
               {m.looks_like_prediction && (
-                <p className="mt-1 max-w-[85%] rounded-lg bg-[#fdf1dc] px-2 py-1 text-[11px] text-amber-700">
-                  ⚠️ Psst — un pronostic posté ici ne compte pas (article 11). Direction l’onglet
-                  📅 Journées !
+                <p className="mt-1 max-w-[85%] rounded-lg bg-warn-soft px-2 py-1 text-[11px] text-warn">
+                  <AlertTriangle size={13} className="mr-1 inline align-[-2px]" aria-hidden />
+                  Un pronostic posté ici ne compte pas (article 11) — direction l’onglet Journées.
                 </p>
               )}
             </div>
@@ -206,10 +207,10 @@ export function Chat({
       <form ref={formRef} onSubmit={onSubmit} className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <label
-            className="cursor-pointer rounded-full border border-[#bcd9c2] px-2.5 py-2 text-sm hover:border-[#9ec4a8]"
+            className="cursor-pointer rounded-full border border-line-strong px-2.5 py-2 text-sm hover:border-line-strong"
             title="Joindre une photo"
           >
-            📎
+            <Paperclip size={17} strokeWidth={1.8} aria-hidden />
             <input
               type="file"
               name="photo"
@@ -223,20 +224,20 @@ export function Chat({
             placeholder="Écrire au Vestiaire…"
             autoComplete="off"
             maxLength={2000}
-            className="min-w-0 flex-1 rounded-full border border-[#bcd9c2] bg-white px-4 py-2 text-sm outline-none focus:border-green-600"
+            className="min-w-0 flex-1 rounded-full border border-line-strong bg-surface px-4 py-2 text-sm outline-none focus:border-accent"
           />
           <button
             type="submit"
             disabled={pending}
-            className="rounded-full bg-green-600 text-white px-3.5 py-2 text-sm font-bold hover:bg-green-500 disabled:opacity-50"
+            className="rounded-full bg-accent text-white px-3.5 py-2 text-sm font-bold hover:bg-accent-strong disabled:opacity-50"
             aria-label="Envoyer"
           >
-            ➤
+            <Send size={16} strokeWidth={2} aria-hidden />
           </button>
         </div>
-        {photoName && <p className="pl-11 text-[11px] text-[#75897a]">📎 {photoName}</p>}
+        {photoName && <p className="pl-11 text-[11px] text-muted">{photoName}</p>}
         {result && !result.ok && (
-          <p className="pl-11 text-[11px] text-red-600">
+          <p className="pl-11 text-[11px] text-danger">
             {result.title}
             {result.detail ? ` — ${result.detail}` : ""}
           </p>
