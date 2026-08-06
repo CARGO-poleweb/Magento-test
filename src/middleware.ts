@@ -4,9 +4,30 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  // Diagnostic clair plutôt qu'un crash opaque si la configuration manque.
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const missing = [
+    !url && "NEXT_PUBLIC_SUPABASE_URL",
+    !anonKey && "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  ].filter(Boolean);
+  if (missing.length > 0) {
+    return new NextResponse(
+      `⚙️ Configuration incomplète : variable(s) d'environnement manquante(s) dans Vercel : ${missing.join(", ")}.\n` +
+        "Vérifiez l'orthographe exacte des noms dans Settings → Environment Variables, puis redéployez.",
+      { status: 500, headers: { "content-type": "text/plain; charset=utf-8" } },
+    );
+  }
+  if (!/^https:\/\/.+\.supabase\.co$/.test(url!.trim())) {
+    return new NextResponse(
+      `⚙️ Configuration invalide : NEXT_PUBLIC_SUPABASE_URL vaut « ${url} » — attendu une adresse du type https://xxxx.supabase.co (sans espace ni guillemets).`,
+      { status: 500, headers: { "content-type": "text/plain; charset=utf-8" } },
+    );
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url!,
+    anonKey!,
     {
       // Session « à vie » : le passage dans le middleware rafraîchit le jeton
       // et repousse l'expiration du cookie à 400 jours (le max navigateur).
