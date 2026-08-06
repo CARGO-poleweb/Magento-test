@@ -74,14 +74,14 @@ export default async function JourneePage({ params }: { params: Promise<{ number
         Toutes les journées
       </Link>
       <header>
-        <h1 className="text-xl font-bold">
+        <h2 className="text-lg font-semibold tracking-tight">
           Journée {day.number}
           {day.type === "multiplex" && (
             <span className="ml-2 rounded-full bg-bonus-soft px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-bonus align-middle">
               Multiplex
             </span>
           )}
-        </h1>
+        </h2>
         <p className="text-xs text-muted">
           Article 6 : chaque match se verrouille 30 minutes avant son coup d’envoi. Article 10 : on
           joue dans l’ordre de la programmation.
@@ -123,7 +123,7 @@ export default async function JourneePage({ params }: { params: Promise<{ number
           return (
             <article
               key={fixture.id}
-              className="rounded-xl border border-line bg-surface p-4"
+              className="rounded-card border border-line bg-surface p-4 shadow-[0_2px_8px_-4px_rgba(18,33,26,0.12)]"
             >
               <div className="flex items-baseline justify-between gap-2">
                 <h2 className="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold">
@@ -243,10 +243,10 @@ export default async function JourneePage({ params }: { params: Promise<{ number
 
       {dayRanking.length > 0 && (
         <section>
-          <h2 className="mb-2 font-bold">
+          <h2 className="mb-2 text-sm font-semibold">
             Points de la journée {finished ? "(définitifs)" : "(provisoires — bonus/malus à la clôture)"}
           </h2>
-          <div className="overflow-hidden rounded-xl border border-line">
+          <div className="overflow-hidden rounded-card border border-line">
             <table className="w-full text-sm">
               <thead className="bg-surface text-left text-xs uppercase text-muted">
                 <tr>

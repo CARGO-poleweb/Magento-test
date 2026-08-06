@@ -81,8 +81,8 @@ export default async function AdminPage() {
       </header>
 
       {season && (
-        <section className="rounded-xl border border-line bg-surface p-4">
-          <h2 className="mb-1 font-bold">Importer le calendrier · {season.name}</h2>
+        <section className="rounded-card border border-line bg-surface p-4 shadow-[0_2px_8px_-4px_rgba(18,33,26,0.12)]">
+          <h2 className="mb-1 text-sm font-semibold">Importer le calendrier · {season.name}</h2>
           <p className="mb-2 text-xs text-muted">
             Le calendrier de la Ligue 1 est connu à l’avance : collez-le une fois pour toute la
             saison, une ligne par match au format{" "}
@@ -98,8 +98,8 @@ export default async function AdminPage() {
       )}
 
       {season && (
-        <section className="rounded-xl border border-line bg-surface p-4">
-          <h2 className="mb-2 font-bold">Créer une journée à la main · {season.name}</h2>
+        <section className="rounded-card border border-line bg-surface p-4 shadow-[0_2px_8px_-4px_rgba(18,33,26,0.12)]">
+          <h2 className="mb-2 text-sm font-semibold">Créer une journée à la main · {season.name}</h2>
           <form action={createMatchday} className="flex gap-2">
             <input
               name="number"
@@ -125,7 +125,7 @@ export default async function AdminPage() {
       )}
 
       {days.map((day) => (
-        <section key={day.id} className="rounded-xl border border-line bg-surface p-4">
+        <section key={day.id} className="rounded-card border border-line bg-surface p-4 shadow-[0_2px_8px_-4px_rgba(18,33,26,0.12)]">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="font-bold">
               Journée {day.number}
@@ -244,8 +244,8 @@ export default async function AdminPage() {
         </section>
       ))}
 
-      <section className="rounded-xl border border-line bg-surface p-4">
-        <h2 className="mb-2 font-bold">Membres ({members.length}/20)</h2>
+      <section className="rounded-card border border-line bg-surface p-4 shadow-[0_2px_8px_-4px_rgba(18,33,26,0.12)]">
+        <h2 className="mb-2 text-sm font-semibold">Membres ({members.length}/20)</h2>
         <ul className="flex flex-col gap-1 text-sm">
           {members.map((m) => (
             <li key={m.id} className="flex items-center justify-between gap-2">
@@ -275,7 +275,7 @@ export default async function AdminPage() {
 
       {season && !season.bonus_reveles && (
         <section className="rounded-xl border border-warn-line bg-warn-soft p-4">
-          <h2 className="mb-1 font-bold">Bonus cachés · {season.name}</h2>
+          <h2 className="mb-1 text-sm font-semibold">Bonus cachés · {season.name}</h2>
           <p className="mb-2 text-xs text-muted">
             Révèle les bonus de tout le monde (irréversible) — à faire après la deadline de dépôt.
           </p>
@@ -291,7 +291,7 @@ export default async function AdminPage() {
       {/* Saisons : préparer 2026-2027 et les suivantes                      */}
       {/* ------------------------------------------------------------------ */}
       <section className="rounded-xl border border-line bg-subtle p-4">
-        <h2 className="mb-1 font-bold">Saisons</h2>
+        <h2 className="mb-1 text-sm font-semibold">Saisons</h2>
         <p className="mb-3 text-xs text-muted">
           Prépare la saison suivante pendant que l’actuelle se joue : compose la Ligue 1
           (promus/relégués), coche les 5 équipes concernées (dont celle tirée au sort et celle

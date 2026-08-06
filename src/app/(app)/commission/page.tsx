@@ -94,12 +94,12 @@ export default async function CommissionPage() {
       </header>
 
       <section>
-        <h2 className="mb-2 font-bold">À juger ({pendingRows.length})</h2>
+        <h2 className="mb-2 text-sm font-semibold">À juger ({pendingRows.length})</h2>
         <div className="flex flex-col gap-3">
           {pendingRows.map((row) => (
             <article
               key={row.id}
-              className="rounded-xl border border-warn-line bg-warn-soft p-4"
+              className="rounded-card border border-warn-line bg-warn-soft p-4"
             >
               <p className="text-sm">
                 <span className="font-semibold">{row.member?.display_name ?? "?"}</span> a écrit{" "}
@@ -111,14 +111,14 @@ export default async function CommissionPage() {
                 <form action={decidePrediction}>
                   <input type="hidden" name="prediction_id" value={row.id} />
                   <input type="hidden" name="decision" value="comptabilise" />
-                  <button className="rounded-lg bg-green-800 px-3 py-1.5 text-xs font-semibold hover:bg-accent text-white">
+                  <button className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white transition-transform hover:bg-accent-strong active:scale-95">
                     Comptabiliser
                   </button>
                 </form>
                 <form action={decidePrediction}>
                   <input type="hidden" name="prediction_id" value={row.id} />
                   <input type="hidden" name="decision" value="non_comptabilise" />
-                  <button className="rounded-lg bg-danger text-white px-3 py-1.5 text-xs font-semibold hover:bg-danger">
+                  <button className="rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-white transition-transform active:scale-95">
                     Ne pas comptabiliser
                   </button>
                 </form>
@@ -126,15 +126,15 @@ export default async function CommissionPage() {
             </article>
           ))}
           {pendingRows.length === 0 && (
-            <p className="rounded-xl border border-line p-4 text-sm text-muted">
+            <p className="rounded-card border border-line bg-surface p-4 text-sm text-muted">
               Rien à juger — tout le monde écrit correctement, pour une fois.
             </p>
           )}
         </div>
       </section>
 
-      <section className="rounded-xl border border-line bg-surface p-4">
-        <h2 className="mb-1 font-bold">Sanction sur le classement général</h2>
+      <section className="rounded-card border border-line bg-surface p-4 shadow-[0_2px_8px_-4px_rgba(18,33,26,0.12)]">
+        <h2 className="mb-1 text-sm font-semibold">Sanction sur le classement général</h2>
         <p className="mb-2 text-[11px] text-muted">
           Ex. : message modifié −2 pts (article 12), vidéo d’anniversaire manquée −3 pts (article
           21), vote hors délai −3 pts (article 22), challenge séché −3 pts (article 23), zéro
@@ -187,7 +187,7 @@ export default async function CommissionPage() {
 
       {adjRows.length > 0 && (
         <section>
-          <h2 className="mb-2 font-bold">Casier (dernières décisions)</h2>
+          <h2 className="mb-2 text-sm font-semibold">Casier (dernières décisions)</h2>
           <ul className="flex flex-col gap-1 text-sm">
             {adjRows.map((a) => (
               <li key={a.id} className="flex justify-between gap-2 text-muted">
@@ -205,7 +205,7 @@ export default async function CommissionPage() {
 
       {decidedRows.length > 0 && (
         <section>
-          <h2 className="mb-2 font-bold">Pronostics déjà jugés</h2>
+          <h2 className="mb-2 text-sm font-semibold">Pronostics déjà jugés</h2>
           <ul className="flex flex-col gap-2 text-sm">
             {decidedRows.map((row) => (
               <li key={row.id} className="rounded-lg border border-line p-2">

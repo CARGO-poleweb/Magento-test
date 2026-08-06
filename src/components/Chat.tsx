@@ -131,8 +131,8 @@ export function Chat({
   }
 
   return (
-    <div className="flex h-full flex-col gap-3">
-      <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
+    <div className="flex flex-col">
+      <div className="flex min-h-[46vh] flex-col justify-end gap-2 pb-20">
         {messages.length === 0 && (
           <p className="rounded-xl border border-line p-4 text-center text-sm text-muted">
             Le Vestiaire est ouvert — premier message, première tournée. 🍻
@@ -204,10 +204,14 @@ export function Chat({
         <div ref={bottomRef} />
       </div>
 
-      <form ref={formRef} onSubmit={onSubmit} className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
+      <form
+        ref={formRef}
+        onSubmit={onSubmit}
+        className="fixed inset-x-0 bottom-[var(--nav-h)] z-10 border-t border-line bg-surface/95 px-4 py-2.5 backdrop-blur-md"
+      >
+        <div className="mx-auto flex w-full max-w-3xl items-center gap-2">
           <label
-            className="cursor-pointer rounded-full border border-line-strong px-2.5 py-2 text-sm hover:border-line-strong"
+            className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-full text-muted transition-colors hover:bg-subtle"
             title="Joindre une photo"
           >
             <Paperclip size={17} strokeWidth={1.8} aria-hidden />
@@ -224,20 +228,22 @@ export function Chat({
             placeholder="Écrire au Vestiaire…"
             autoComplete="off"
             maxLength={2000}
-            className="min-w-0 flex-1 rounded-full border border-line-strong bg-surface px-4 py-2 text-sm outline-none focus:border-accent"
+            className="min-w-0 flex-1 rounded-full border border-line-strong bg-canvas px-4 py-2.5 text-sm outline-none transition-colors focus:border-accent focus:bg-surface"
           />
           <button
             type="submit"
             disabled={pending}
-            className="rounded-full bg-accent text-white px-3.5 py-2 text-sm font-bold hover:bg-accent-strong disabled:opacity-50"
+            className="grid size-10 shrink-0 place-items-center rounded-full bg-accent text-white transition-transform hover:bg-accent-strong active:scale-95 disabled:opacity-50"
             aria-label="Envoyer"
           >
             <Send size={16} strokeWidth={2} aria-hidden />
           </button>
         </div>
-        {photoName && <p className="pl-11 text-[11px] text-muted">{photoName}</p>}
+        {photoName && (
+          <p className="mx-auto w-full max-w-3xl pl-11 pt-1 text-[11px] text-muted">{photoName}</p>
+        )}
         {result && !result.ok && (
-          <p className="pl-11 text-[11px] text-danger">
+          <p className="mx-auto w-full max-w-3xl pl-11 pt-1 text-[11px] text-danger">
             {result.title}
             {result.detail ? ` — ${result.detail}` : ""}
           </p>

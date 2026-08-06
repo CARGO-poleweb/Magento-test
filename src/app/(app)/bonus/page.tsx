@@ -79,7 +79,7 @@ export default async function BonusPage() {
           return (
             <section
               key={bonus.type}
-              className="rounded-xl border border-line bg-surface p-4"
+              className="rounded-card border border-line bg-surface p-4 shadow-[0_2px_8px_-4px_rgba(18,33,26,0.12)]"
             >
               <div className="mb-2 flex items-baseline justify-between gap-2">
                 <h2 className="font-semibold">{bonus.label}</h2>
@@ -108,7 +108,7 @@ export default async function BonusPage() {
           {BONUSES.map((bonus) => (
             <section
               key={bonus.type}
-              className="rounded-xl border border-line bg-surface p-4"
+              className="rounded-card border border-line bg-surface p-4 shadow-[0_2px_8px_-4px_rgba(18,33,26,0.12)]"
             >
               <div className="mb-2 flex items-baseline justify-between gap-2">
                 <h2 className="font-semibold">{bonus.label}</h2>

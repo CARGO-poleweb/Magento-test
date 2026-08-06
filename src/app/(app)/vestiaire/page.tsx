@@ -30,7 +30,7 @@ export default async function VestiairePage() {
   );
 
   return (
-    <div className="flex h-[calc(100dvh-160px)] flex-col gap-2">
+    <div className="flex flex-col gap-3">
       <header>
         <h2 className="text-lg font-semibold tracking-tight">Le Vestiaire</h2>
         <p className="text-xs text-muted">
