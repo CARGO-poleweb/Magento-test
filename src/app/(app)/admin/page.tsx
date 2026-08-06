@@ -13,6 +13,7 @@ import {
   setRadiation,
   updateKickoff,
 } from "@/app/actions";
+import { ApiSyncPanel } from "@/components/ApiSyncPanel";
 import { ImportCalendarForm } from "@/components/ImportCalendarForm";
 import { formatKickoff, getCurrentSeason, getSessionProfile } from "@/lib/data";
 import type { Fixture, Matchday, Profile, Season, Team } from "@/lib/types";
@@ -81,8 +82,25 @@ export default async function AdminPage() {
       </header>
 
       {season && (
-        <section className="rounded-card border border-line bg-surface p-4 shadow-[0_2px_8px_-4px_rgba(18,33,26,0.12)]">
-          <h2 className="mb-1 text-sm font-semibold">Importer le calendrier · {season.name}</h2>
+        <section className="rounded-card border border-accent-line bg-accent-soft p-4">
+          <h2 className="mb-1 text-sm font-semibold">Calendrier et résultats automatiques</h2>
+          <p className="mb-3 text-xs text-muted">
+            Les données viennent de football-data.org. « Importer le calendrier » crée les journées
+            manquantes (multiplex en J1 et J34, matchs des équipes concernées ★ le reste du temps)
+            et rafraîchit les horaires des matchs pas encore joués. « Récupérer les résultats »
+            remplit les scores manquants — c’est aussi fait automatiquement chaque soir. La saisie
+            à la main reste possible : le Président garde le dernier mot (article 1).
+          </p>
+          <ApiSyncPanel configured={Boolean(process.env.FOOTBALL_DATA_TOKEN)} />
+        </section>
+      )}
+
+      {season && (
+        <details className="rounded-card border border-line bg-surface p-4 shadow-[0_2px_8px_-4px_rgba(18,33,26,0.12)]">
+          <summary className="cursor-pointer text-sm font-semibold">
+            Importer un calendrier à la main
+          </summary>
+          <h2 className="sr-only">Importer le calendrier · {season.name}</h2>
           <p className="mb-2 text-xs text-muted">
             Le calendrier de la Ligue 1 est connu à l’avance : collez-le une fois pour toute la
             saison, une ligne par match au format{" "}
@@ -94,7 +112,7 @@ export default async function AdminPage() {
             automatiquement en multiplex.
           </p>
           <ImportCalendarForm />
-        </section>
+        </details>
       )}
 
       {season && (

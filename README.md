@@ -28,6 +28,8 @@ PWA installable sur téléphone. Prévu pour ~20 membres, coût d'hébergement :
   d'anniversaire séchée, etc.).
 - **Rôles** : Président (a toujours raison), Premier Ministre, Président de la Commission,
   Secrétaire, Chargé de mission, membres. 20 membres maximum (article 4), radiation possible.
+- **Calendrier et scores automatiques** : import du calendrier de la saison et récupération des
+  résultats depuis football-data.org, en un clic ou par tâche planifiée quotidienne.
 - **Multi-saisons** : la ligue se rejoue chaque année. Le Président prépare la saison suivante
   (2026-2027…) depuis son espace — composition de la Ligue 1 (promus/relégués, ajout de clubs au
   référentiel avec leurs alias), choix des 5 équipes concernées ★, mise et échéances — puis
@@ -71,7 +73,23 @@ PWA installable sur téléphone. Prévu pour ~20 membres, coût d'hébergement :
    (sur iPhone : installer d'abord l'app sur l'écran d'accueil). Deux réglages par membre :
    le jeu (journée publiée, points, Commission) et le Vestiaire (chaque message du chat).
 
-### 4. Configurer la ligue
+### 4. Calendrier et résultats automatiques (recommandé)
+
+1. Récupérez votre jeton sur [football-data.org](https://www.football-data.org) (offre gratuite,
+   la Ligue 1 y est incluse).
+2. Ajoutez-le dans Vercel : `FOOTBALL_DATA_TOKEN`. Ajoutez aussi `CRON_SECRET` (une chaîne au
+   hasard) pour protéger la tâche planifiée.
+3. Dans l'app, **⋯ Plus → Espace du Président** :
+   - **Importer le calendrier** crée les journées manquantes — multiplex en J1 et J34 (tous les
+     matchs), matchs des équipes concernées ★ le reste du temps — et rafraîchit les horaires des
+     matchs pas encore joués (reprogrammations TV) ;
+   - **Récupérer les résultats** remplit les scores manquants. C'est également fait
+     automatiquement chaque soir à 22 h UTC par la tâche planifiée déclarée dans `vercel.json`.
+
+La saisie manuelle (calendrier collé, scores au clavier) reste disponible en secours : le
+Président garde le dernier mot (article 1).
+
+### 5. Configurer la ligue
 
 1. Chaque membre se connecte une première fois avec son e-mail (lien magique) — le profil se crée
    tout seul, dans la limite de 20 (article 4).
