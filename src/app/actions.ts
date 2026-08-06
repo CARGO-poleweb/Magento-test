@@ -826,6 +826,56 @@ export async function enterResult(formData: FormData): Promise<void> {
   revalidatePath("/");
 }
 
+/**
+ * Retour en brouillon : la journée disparaît de l'app côté membres. Refusé
+ * dès qu'un pronostic a été déposé — l'article 12 les rend définitifs, on ne
+ * peut pas retirer le terrain sous les pieds de ceux qui ont déjà joué.
+ */
+export async function unpublishMatchday(formData: FormData): Promise<void> {
+  await requirePresident();
+  const id = Number(formData.get("matchday_id"));
+  const service = createServiceClient();
+
+  const { data: fixtures } = await service.from("fixtures").select("id").eq("matchday_id", id);
+  const ids = ((fixtures ?? []) as { id: number }[]).map((f) => f.id);
+  if (ids.length > 0) {
+    const { count } = await service
+      .from("predictions")
+      .select("id", { count: "exact", head: true })
+      .in("fixture_id", ids);
+    if ((count ?? 0) > 0) return;
+  }
+
+  await service.from("matchdays").update({ status: "brouillon" }).eq("id", id);
+  revalidatePath("/", "layout");
+}
+
+/**
+ * Suppression d'une journée — pour effacer un essai. Les matchs partent en
+ * cascade ; les pronostics déjà déposés, eux, sont intouchables.
+ */
+export async function deleteMatchday(formData: FormData): Promise<void> {
+  await requirePresident();
+  const id = Number(formData.get("matchday_id"));
+  const service = createServiceClient();
+
+  const { data: day } = await service.from("matchdays").select("status").eq("id", id).single();
+  if (!day || day.status !== "brouillon") return;
+
+  const { data: fixtures } = await service.from("fixtures").select("id").eq("matchday_id", id);
+  const ids = ((fixtures ?? []) as { id: number }[]).map((f) => f.id);
+  if (ids.length > 0) {
+    const { count } = await service
+      .from("predictions")
+      .select("id", { count: "exact", head: true })
+      .in("fixture_id", ids);
+    if ((count ?? 0) > 0) return;
+  }
+
+  await service.from("matchdays").delete().eq("id", id);
+  revalidatePath("/", "layout");
+}
+
 export async function finishMatchday(formData: FormData): Promise<void> {
   await requirePresident();
   const id = Number(formData.get("matchday_id"));

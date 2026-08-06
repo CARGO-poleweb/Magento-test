@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   activateSeason,
@@ -5,12 +6,14 @@ import {
   createMatchday,
   createSeason,
   createTeam,
+  deleteMatchday,
   enterResult,
   finishMatchday,
   publishMatchday,
   revealBonuses,
   saveSeasonTeams,
   setRadiation,
+  unpublishMatchday,
   updateKickoff,
 } from "@/app/actions";
 import { ApiSyncPanel } from "@/components/ApiSyncPanel";
@@ -55,6 +58,16 @@ export default async function AdminPage() {
   const actionDays = days.filter((d) => d.status !== "terminee");
   const doneDays = days.filter((d) => d.status === "terminee");
 
+  // Une journée sur laquelle personne n'a encore parié peut être retirée ;
+  // dès le premier pronostic, elle est gravée (article 12).
+  const openFixtureIds = actionDays.flatMap((d) => d.fixtures.map((f) => f.id));
+  const { data: placed } = openFixtureIds.length
+    ? await supabase.from("predictions").select("fixture_id").in("fixture_id", openFixtureIds)
+    : { data: [] };
+  const betOn = new Set(((placed ?? []) as { fixture_id: number }[]).map((p) => p.fixture_id));
+  const hasBets = (day: Matchday & { fixtures: Fixture[] }) =>
+    day.fixtures.some((f) => betOn.has(f.id));
+
   const trackedOf = (seasonId: number) =>
     memberships.filter((m) => m.season_id === seasonId && m.tracked).length;
   const currentTracked = season ? trackedOf(season.id) : 0;
@@ -84,6 +97,7 @@ export default async function AdminPage() {
   const DayCard = ({ day }: { day: Matchday & { fixtures: Fixture[] } }) => {
     // La clôture déclenche le +3, le +10 et le −2 : elle exige tous les scores.
     const missing = day.fixtures.filter((f) => f.home_score === null).length;
+    const bets = hasBets(day);
     return (
     <section className="rounded-card border border-line bg-surface p-4 shadow-[0_2px_8px_-4px_rgba(18,33,26,0.12)]">
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -100,6 +114,28 @@ export default async function AdminPage() {
               <input type="hidden" name="matchday_id" value={day.id} />
               <button className="rounded-lg bg-accent text-white transition-transform active:scale-95 px-3 py-1.5 text-xs font-semibold hover:bg-accent-strong">
                 Publier
+              </button>
+            </form>
+          )}
+          {day.status === "publiee" && !bets && (
+            <form action={unpublishMatchday}>
+              <input type="hidden" name="matchday_id" value={day.id} />
+              <button
+                className="rounded-lg border border-line-strong px-3 py-1.5 text-xs font-semibold text-muted hover:text-ink"
+                title="Repasse en brouillon : la journée disparaît côté membres"
+              >
+                Dépublier
+              </button>
+            </form>
+          )}
+          {day.status === "brouillon" && !bets && (
+            <form action={deleteMatchday}>
+              <input type="hidden" name="matchday_id" value={day.id} />
+              <button
+                className="rounded-lg border border-danger-line px-3 py-1.5 text-xs font-semibold text-danger hover:bg-danger-soft"
+                title="Supprime la journée et ses matchs"
+              >
+                Supprimer
               </button>
             </form>
           )}
@@ -218,6 +254,13 @@ export default async function AdminPage() {
           voient une journée qu’une fois publiée (article 10). ★ = équipes concernées.
         </p>
         <nav className="mt-3 flex flex-wrap gap-2 text-xs">
+          <Link
+            href="/admin/guide"
+            prefetch
+            className="rounded-full border border-accent-line bg-accent-soft px-3 py-1 font-semibold text-accent-strong hover:bg-accent hover:text-white"
+          >
+            Guide du Président
+          </Link>
           {[
             { href: "#saisons", label: "Saisons ★" },
             { href: "#membres", label: "Membres" },
