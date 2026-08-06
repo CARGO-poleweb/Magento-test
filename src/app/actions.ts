@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+import { sendPush } from "@/lib/push";
 import { looksLikePrediction, matchTeam, parsePrediction } from "@/lib/parser";
 import { canJudge, getCurrentSeason, getSessionProfile } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
@@ -210,6 +212,20 @@ export async function sendMessage(
   });
   if (error) return { ok: false, title: "Message non envoyé", detail: error.message };
 
+  // Notification après la réponse (pas de latence pour l'expéditeur).
+  after(() =>
+    sendPush(
+      "vestiaire",
+      {
+        title: `💬 ${profile.display_name}`,
+        body: content ? (content.length > 120 ? content.slice(0, 117) + "…" : content) : "📷 Photo",
+        url: "/vestiaire",
+        tag: "vestiaire",
+      },
+      { exclude: [profile.id] },
+    ),
+  );
+
   return { ok: true, title: "envoyé" };
 }
 
@@ -242,6 +258,47 @@ export async function toggleReaction(formData: FormData): Promise<void> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Notifications push
+// ---------------------------------------------------------------------------
+export async function savePushSubscription(subscription: {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+}): Promise<void> {
+  const { profile } = await getSessionProfile();
+  if (!subscription?.endpoint || !subscription.keys?.p256dh || !subscription.keys?.auth) return;
+
+  const service = createServiceClient();
+  await service.from("push_subscriptions").upsert({
+    endpoint: subscription.endpoint,
+    member_id: profile.id,
+    p256dh: subscription.keys.p256dh,
+    auth: subscription.keys.auth,
+  });
+}
+
+export async function deletePushSubscription(endpoint: string): Promise<void> {
+  const { profile } = await getSessionProfile();
+  if (!endpoint) return;
+  const service = createServiceClient();
+  await service
+    .from("push_subscriptions")
+    .delete()
+    .eq("endpoint", endpoint)
+    .eq("member_id", profile.id);
+}
+
+export async function saveNotificationSettings(formData: FormData): Promise<void> {
+  const { profile } = await getSessionProfile();
+  const service = createServiceClient();
+  await service.from("notification_settings").upsert({
+    member_id: profile.id,
+    vestiaire: formData.get("vestiaire") === "on",
+    jeu: formData.get("jeu") === "on",
+  });
+  revalidatePath("/plus");
+}
+
 /** Marque le Vestiaire comme lu (pastille de non-lus). */
 export async function markChatRead(): Promise<void> {
   const { profile } = await getSessionProfile();
@@ -263,13 +320,31 @@ export async function decidePrediction(formData: FormData): Promise<void> {
   if (!canJudge(profile.role)) return;
 
   const service = createServiceClient();
-  await service
+  const { data: decided } = await service
     .from("predictions")
     .update({ status: decision, decided_by: profile.id, decided_at: new Date().toISOString() })
     .eq("id", predictionId)
-    .eq("status", "a_examiner");
+    .eq("status", "a_examiner")
+    .select("member_id, raw_text")
+    .maybeSingle();
 
   revalidatePath("/commission");
+
+  if (decided) {
+    const kept = decision === "comptabilise";
+    after(() =>
+      sendPush(
+        "jeu",
+        {
+          title: "⚖️ Décision de la Commission",
+          body: `Ton pronostic « ${decided.raw_text} » a été ${kept ? "comptabilisé ✅" : "refusé ❌"}.`,
+          url: "/journees",
+          tag: "commission",
+        },
+        { only: [decided.member_id] },
+      ),
+    );
+  }
 }
 
 export async function addAdjustment(formData: FormData): Promise<void> {
@@ -493,13 +568,26 @@ export async function publishMatchday(formData: FormData): Promise<void> {
   await requirePresident();
   const id = Number(formData.get("matchday_id"));
   const service = createServiceClient();
-  await service
+  const { data: day } = await service
     .from("matchdays")
     .update({ status: "publiee", published_at: new Date().toISOString() })
     .eq("id", id)
-    .eq("status", "brouillon");
+    .eq("status", "brouillon")
+    .select("number")
+    .maybeSingle();
   revalidatePath("/admin");
   revalidatePath("/journees");
+
+  if (day) {
+    after(() =>
+      sendPush("jeu", {
+        title: `📣 Journée ${day.number} publiée !`,
+        body: "Les pronostics sont ouverts — à toi de jouer (article 10).",
+        url: `/journees/${day.number}`,
+        tag: "journee",
+      }),
+    );
+  }
 }
 
 export async function enterResult(formData: FormData): Promise<void> {
@@ -529,9 +617,25 @@ export async function finishMatchday(formData: FormData): Promise<void> {
     .is("home_score", null);
   if ((missing ?? 0) > 0) return;
 
-  await service.from("matchdays").update({ status: "terminee" }).eq("id", id);
+  const { data: day } = await service
+    .from("matchdays")
+    .update({ status: "terminee" })
+    .eq("id", id)
+    .select("number")
+    .maybeSingle();
   revalidatePath("/admin");
   revalidatePath("/");
+
+  if (day) {
+    after(() =>
+      sendPush("jeu", {
+        title: `🏁 Journée ${day.number} clôturée`,
+        body: "Les points sont tombés — va voir ce que tu as pris.",
+        url: `/journees/${day.number}`,
+        tag: "journee",
+      }),
+    );
+  }
 }
 
 export async function recordMise(formData: FormData): Promise<void> {

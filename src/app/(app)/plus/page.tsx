@@ -1,9 +1,16 @@
 import Link from "next/link";
 import { signOut } from "@/app/actions";
+import { NotificationSettings } from "@/components/NotificationSettings";
 import { canJudge, getSessionProfile } from "@/lib/data";
 
 export default async function PlusPage() {
   const { supabase, profile } = await getSessionProfile();
+
+  const { data: notifSettings } = await supabase
+    .from("notification_settings")
+    .select("vestiaire, jeu")
+    .eq("member_id", profile.id)
+    .maybeSingle();
 
   // Pastille : dossiers en attente pour les membres de la Commission.
   let pendingCount = 0;
@@ -69,6 +76,12 @@ export default async function PlusPage() {
           </Link>
         ))}
       </nav>
+
+      <NotificationSettings
+        vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null}
+        initialVestiaire={notifSettings?.vestiaire ?? true}
+        initialJeu={notifSettings?.jeu ?? true}
+      />
 
       <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 text-xs text-neutral-500">
         Connecté en tant que <span className="text-neutral-300">{profile.display_name}</span>. La

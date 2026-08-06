@@ -244,6 +244,27 @@ values ('vestiaire', 'vestiaire', true)
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------
+-- Notifications push : un abonnement par navigateur/appareil, et les
+-- préférences de chacun (Vestiaire coupable de spam ? on le coupe sans
+-- perdre les alertes de jeu : journée publiée, clôture, Commission).
+-- ---------------------------------------------------------------------------
+create table push_subscriptions (
+  endpoint text primary key,
+  member_id uuid not null references profiles (id) on delete cascade,
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz not null default now()
+);
+
+create index push_subscriptions_member on push_subscriptions (member_id);
+
+create table notification_settings (
+  member_id uuid primary key references profiles (id) on delete cascade,
+  vestiaire boolean not null default true, -- messages du chat
+  jeu boolean not null default true        -- journées, résultats, Commission
+);
+
+-- ---------------------------------------------------------------------------
 -- RLS : lecture pour les membres authentifiés, écritures uniquement via les
 -- server actions de l'app (clé service role). Personne ne peut modifier ou
 -- supprimer un pronostic, même pas le Président (art. 12).
@@ -261,6 +282,8 @@ alter table point_adjustments enable row level security;
 alter table messages enable row level security;
 alter table message_reactions enable row level security;
 alter table chat_reads enable row level security;
+alter table push_subscriptions enable row level security;
+alter table notification_settings enable row level security;
 
 create policy "profils visibles de tous les membres"
   on profiles for select to authenticated using (true);
@@ -320,3 +343,9 @@ create policy "réactions visibles"
 
 create policy "marqueur de lecture personnel"
   on chat_reads for select to authenticated using (member_id = auth.uid());
+
+create policy "abonnements push personnels"
+  on push_subscriptions for select to authenticated using (member_id = auth.uid());
+
+create policy "préférences de notification personnelles"
+  on notification_settings for select to authenticated using (member_id = auth.uid());

@@ -59,7 +59,17 @@ PWA installable sur téléphone. Prévu pour ~20 membres, coût d'hébergement :
    - `SUPABASE_SERVICE_ROLE_KEY` *(secret serveur — jamais côté client)*
 3. Déployez, puis reportez l'URL obtenue dans la Site URL de Supabase (étape 1.4).
 
-### 3. Configurer la ligue
+### 3. Activer les notifications push (optionnel, recommandé)
+
+1. Générez une paire de clés VAPID : `npx web-push generate-vapid-keys`.
+2. Ajoutez dans Vercel : `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` et
+   `VAPID_SUBJECT` (un `mailto:` de contact). Sans ces clés, l'app fonctionne, juste sans
+   notifications.
+3. Chaque membre active ensuite ses notifications depuis l'onglet **⋯ Plus → 🔔 Notifications**
+   (sur iPhone : installer d'abord l'app sur l'écran d'accueil). Deux réglages par membre :
+   le jeu (journée publiée, points, Commission) et le Vestiaire (chaque message du chat).
+
+### 4. Configurer la ligue
 
 1. Chaque membre se connecte une première fois avec son e-mail (lien magique) — le profil se crée
    tout seul, dans la limite de 20 (article 4).
