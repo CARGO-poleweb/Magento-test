@@ -77,8 +77,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       <main className="flex-1 px-4 pb-[calc(var(--nav-h)+20px)] pt-4">{children}</main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 pb-[max(env(safe-area-inset-bottom),8px)] backdrop-blur-md">
-        <div className="mx-auto flex h-[54px] w-full max-w-3xl items-center justify-around">
+      <nav
+        className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 shadow-[0_-4px_16px_-12px_rgba(18,33,26,0.5)] backdrop-blur-md"
+        style={{ paddingBottom: "var(--nav-safe)" }}
+      >
+        <div className="mx-auto flex h-[52px] w-full max-w-3xl items-stretch justify-around">
           {tabs.map((tab) => (
             <TabLink key={tab.href} {...tab} />
           ))}
