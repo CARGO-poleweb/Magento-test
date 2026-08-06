@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
@@ -23,8 +24,11 @@ export const ROLE_LABELS: Record<MemberRole, string> = {
   membre: "Membre",
 };
 
-/** Utilisateur connecté + son profil ; redirige vers /login sinon. */
-export async function getSessionProfile() {
+/** Utilisateur connecté + son profil ; redirige vers /login sinon.
+ *  `cache()` : le layout et la page appellent tous deux cette fonction à
+ *  chaque navigation — sans cache, l'aller-retour d'authentification et la
+ *  lecture du profil seraient payés deux fois par affichage. */
+export const getSessionProfile = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -39,7 +43,7 @@ export async function getSessionProfile() {
   if (!profile) redirect("/login");
 
   return { supabase, user, profile };
-}
+});
 
 /** La saison courante de la ligue (une seule à la fois). */
 export async function getCurrentSeason(supabase: SupabaseClient): Promise<Season | null> {
