@@ -84,6 +84,56 @@ export default async function ClassementPage({
   if (!isArchive) {
     const myPreds = preds.filter((p) => p.member_id === profile.id);
 
+    // Toutes les données des cartes en un seul lot parallèle : chaque
+    // aller-retour vers la base se paie au prix fort à l'affichage.
+    const isJudge = canJudge(profile.role);
+    const isPresident = profile.role === "president";
+    const deadline = new Date(viewedSeason.bonus_deadline).getTime();
+    const deadlineOpen = !viewedSeason.bonus_reveles && now < deadline;
+
+    const [readRes, pendingRes, draftsRes, bonusesRes, misesRes] = await Promise.all([
+      supabase.from("chat_reads").select("last_read_at").eq("member_id", profile.id).maybeSingle(),
+      isJudge
+        ? supabase
+            .from("predictions")
+            .select("id", { count: "exact", head: true })
+            .eq("status", "a_examiner")
+        : Promise.resolve({ count: 0 }),
+      isPresident
+        ? supabase
+            .from("matchdays")
+            .select("number, fixtures(id)")
+            .eq("season_id", viewedSeason.id)
+            .eq("status", "brouillon")
+            .order("number")
+            .limit(1)
+        : Promise.resolve({ data: null }),
+      deadlineOpen
+        ? supabase
+            .from("hidden_bonuses")
+            .select("type")
+            .eq("season_id", viewedSeason.id)
+            .eq("member_id", profile.id)
+        : Promise.resolve({ data: [] }),
+      deadlineOpen
+        ? supabase
+            .from("ledger")
+            .select("id")
+            .eq("season_id", viewedSeason.id)
+            .eq("member_id", profile.id)
+            .eq("type", "mise")
+            .limit(1)
+        : Promise.resolve({ data: [{ id: "payé" }] }),
+    ]);
+
+    let unreadQuery = supabase
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .neq("member_id", profile.id);
+    const lastRead = readRes.data?.last_read_at;
+    if (lastRead) unreadQuery = unreadQuery.gt("created_at", lastRead);
+    const { count: unread } = await unreadQuery;
+
     // 1. Pronostics : journée ouverte avec des matchs encore jouables.
     const openDay = days
       .filter((d) => d.status === "publiee")
@@ -160,17 +210,6 @@ export default async function ClassementPage({
     }
 
     // 3. Vestiaire : messages non lus.
-    const { data: read } = await supabase
-      .from("chat_reads")
-      .select("last_read_at")
-      .eq("member_id", profile.id)
-      .maybeSingle();
-    let unreadQuery = supabase
-      .from("messages")
-      .select("id", { count: "exact", head: true })
-      .neq("member_id", profile.id);
-    if (read?.last_read_at) unreadQuery = unreadQuery.gt("created_at", read.last_read_at);
-    const { count: unread } = await unreadQuery;
     if ((unread ?? 0) > 0) {
       cards.push({
         href: "/vestiaire",
@@ -185,12 +224,9 @@ export default async function ClassementPage({
     }
 
     // 4. Commission : les juges voient ce qui les attend.
-    if (canJudge(profile.role)) {
-      const { count } = await supabase
-        .from("predictions")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "a_examiner");
-      if ((count ?? 0) > 0) {
+    if (isJudge) {
+      const count = pendingRes.count ?? 0;
+      if (count > 0) {
         cards.push({
           href: "/commission",
           tone: "amber",
@@ -204,16 +240,9 @@ export default async function ClassementPage({
       }
     }
 
-    // 4. Président : sa prochaine action de gestion.
-    if (profile.role === "president") {
-      const { data: drafts } = await supabase
-        .from("matchdays")
-        .select("number, fixtures(id)")
-        .eq("season_id", viewedSeason.id)
-        .eq("status", "brouillon")
-        .order("number")
-        .limit(1);
-      const draft = drafts?.[0];
+    // 5. Président : sa prochaine action de gestion.
+    if (isPresident) {
+      const draft = draftsRes.data?.[0];
       const toClose = days
         .filter((d) => d.status === "publiee")
         .find((d) => d.fixtures.every((f) => new Date(f.kickoff_at).getTime() < now));
@@ -246,23 +275,10 @@ export default async function ClassementPage({
       }
     }
 
-    // 5. Échéances du 30/09 : bonus cachés et mise.
-    const deadline = new Date(viewedSeason.bonus_deadline).getTime();
-    if (!viewedSeason.bonus_reveles && now < deadline) {
-      const [{ data: myBonuses }, { data: myMises }] = await Promise.all([
-        supabase
-          .from("hidden_bonuses")
-          .select("type")
-          .eq("season_id", viewedSeason.id)
-          .eq("member_id", profile.id),
-        supabase
-          .from("ledger")
-          .select("id")
-          .eq("season_id", viewedSeason.id)
-          .eq("member_id", profile.id)
-          .eq("type", "mise")
-          .limit(1),
-      ]);
+    // 6. Échéances du 30/09 : bonus cachés et mise.
+    if (deadlineOpen) {
+      const myBonuses = bonusesRes.data;
+      const myMises = misesRes.data;
       const daysLeft = Math.ceil((deadline - now) / 86_400_000);
       const missingBonuses = 6 - ((myBonuses ?? []) as Pick<HiddenBonus, "type">[]).length;
       if (missingBonuses > 0) {
