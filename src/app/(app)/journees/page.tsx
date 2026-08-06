@@ -40,7 +40,8 @@ export default async function JourneesPage() {
           <Link
             key={day.id}
             href={`/journees/${day.number}`}
-            className="flex items-center justify-between rounded-xl border border-line bg-surface p-4 hover:bg-subtle"
+            prefetch
+            className="flex items-center justify-between rounded-card border border-line bg-surface p-4 shadow-[0_2px_8px_-4px_rgba(18,33,26,0.14)] transition-transform hover:bg-subtle active:scale-[0.99]"
           >
             <div>
               <p className="font-semibold">

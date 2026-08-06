@@ -45,15 +45,19 @@ export const getSessionProfile = cache(async () => {
   return { supabase, user, profile };
 });
 
-/** La saison courante de la ligue (une seule à la fois). */
-export async function getCurrentSeason(supabase: SupabaseClient): Promise<Season | null> {
-  const { data } = await supabase
-    .from("seasons")
-    .select("*")
-    .eq("is_current", true)
-    .maybeSingle<Season>();
-  return data;
-}
+/** La saison courante de la ligue (une seule à la fois).
+ *  Mise en cache par requête : le layout et la page la demandent tous les
+ *  deux à chaque navigation, une seule lecture suffit. */
+export const getCurrentSeason = cache(
+  async (supabase: SupabaseClient): Promise<Season | null> => {
+    const { data } = await supabase
+      .from("seasons")
+      .select("*")
+      .eq("is_current", true)
+      .maybeSingle<Season>();
+    return data;
+  },
+);
 
 const dateFmt = new Intl.DateTimeFormat("fr-FR", {
   timeZone: "Europe/Paris",

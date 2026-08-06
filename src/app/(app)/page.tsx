@@ -94,6 +94,13 @@ export default async function ClassementPage({
   ];
   const isArchive = !viewedSeason.is_current;
 
+  // Bandeau de stats : ma place, mes points, la journée du moment.
+  const myIndex = rows.findIndex((r) => r.memberId === profile.id);
+  const myRow = myIndex >= 0 ? rows[myIndex] : null;
+  const currentDay =
+    days.filter((d) => d.status === "publiee").sort((a, b) => b.number - a.number)[0] ??
+    days.filter((d) => d.status === "terminee").sort((a, b) => b.number - a.number)[0];
+
   // -------------------------------------------------------------------------
   // Cartes d'action : la prochaine action de CE membre, dans l'ordre de ce qui
   // presse le plus. (Uniquement sur la saison en cours, pas les archives.)
@@ -364,7 +371,8 @@ export default async function ClassementPage({
                 <Link
                   key={i}
                   href={card.href}
-                  className="flex items-center gap-4 rounded-card bg-accent px-5 py-5 text-white shadow-[0_10px_24px_-12px_rgba(15,157,84,0.8)] transition-transform active:scale-[0.99]"
+                  prefetch
+                  className="flex items-center gap-4 rounded-card bg-accent px-5 py-5 text-white shadow-[0_12px_26px_-12px_rgba(15,157,84,0.85)] transition-transform active:scale-[0.98]"
                 >
                   <span className="grid size-11 shrink-0 place-items-center rounded-full bg-white/20">
                     <card.Icon size={22} strokeWidth={2} aria-hidden />
@@ -386,7 +394,8 @@ export default async function ClassementPage({
               <Link
                 key={i}
                 href={card.href}
-                className={`flex items-center gap-3 rounded-card border px-4 py-3 transition-colors hover:border-line-strong ${tone.box}`}
+                prefetch
+                className={`flex items-center gap-3 rounded-card border px-4 py-3 shadow-[0_2px_8px_-4px_rgba(18,33,26,0.14)] transition-transform active:scale-[0.99] ${tone.box}`}
               >
                 <span className={`grid size-9 shrink-0 place-items-center rounded-full ${tone.tile}`}>
                   <card.Icon size={17} strokeWidth={2} aria-hidden />
@@ -404,13 +413,44 @@ export default async function ClassementPage({
         </div>
       )}
 
+      {myRow && (
+        <section className="grid grid-cols-3 gap-2.5">
+          <div className="rounded-card border border-gold/25 bg-gold-soft px-3 py-3 text-center">
+            <p className="text-2xl font-bold leading-none text-gold tabular">{myIndex + 1}</p>
+            <p className="mt-1.5 text-[11px] font-medium text-muted">
+              {myIndex === 0 ? "Leader" : `sur ${rows.length}`}
+            </p>
+          </div>
+          <div className="rounded-card border border-accent-line bg-accent-soft px-3 py-3 text-center">
+            <p className="text-2xl font-bold leading-none text-accent-strong tabular">
+              {myRow.total}
+            </p>
+            <p className="mt-1.5 text-[11px] font-medium text-muted">
+              point{Math.abs(myRow.total) > 1 ? "s" : ""}
+            </p>
+          </div>
+          <div className="rounded-card border border-justice/20 bg-justice-soft px-3 py-3 text-center">
+            <p className="text-2xl font-bold leading-none text-justice tabular">
+              {currentDay ? `J${currentDay.number}` : "—"}
+            </p>
+            <p className="mt-1.5 text-[11px] font-medium text-muted">
+              {currentDay
+                ? currentDay.status === "publiee"
+                  ? "en cours"
+                  : "terminée"
+                : "à venir"}
+            </p>
+          </div>
+        </section>
+      )}
+
       <section>
         <div className="mb-3 flex items-baseline justify-between gap-3">
           <h2 className="text-lg font-semibold tracking-tight">Classement</h2>
           <span className="text-xs text-faint">{viewedSeason.name}</span>
         </div>
 
-        <ul className="overflow-hidden rounded-card border border-line bg-surface">
+        <ul className="overflow-hidden rounded-card border border-line bg-surface shadow-[0_2px_10px_-4px_rgba(18,33,26,0.12)]">
           {rows.map((row, i) => {
             const member = byId.get(row.memberId);
             if (!member) return null;
@@ -445,7 +485,7 @@ export default async function ClassementPage({
                   </span>
                 </span>
                 <span
-                  className={`shrink-0 text-lg font-bold tabular ${
+                  className={`shrink-0 text-xl font-bold tabular ${
                     i === 0 ? "text-gold" : "text-ink"
                   }`}
                 >
@@ -455,8 +495,11 @@ export default async function ClassementPage({
             );
           })}
           {rows.length === 0 && (
-            <li className="px-4 py-8 text-center text-sm text-muted">
-              Personne au classement pour l’instant.
+            <li className="px-4 py-10 text-center">
+              <p className="text-sm font-medium">Le classement est encore vierge</p>
+              <p className="mt-1 text-xs text-muted">
+                Il se remplira dès la première journée clôturée.
+              </p>
             </li>
           )}
         </ul>
