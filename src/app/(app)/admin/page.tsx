@@ -21,6 +21,8 @@ import { ImportCalendarForm } from "@/components/ImportCalendarForm";
 import { DeleteMemberPanel } from "@/components/DeleteMemberPanel";
 import { InviteLinkPanel } from "@/components/InviteLinkPanel";
 import { formatKickoff, getCurrentSeason, getSessionProfile } from "@/lib/data";
+import { createServiceClient } from "@/lib/supabase/service";
+import { nowMs } from "@/lib/types";
 import type { Fixture, Matchday, Profile, Season, Team } from "@/lib/types";
 
 const STATUS_LABELS = { brouillon: "brouillon", publiee: "publiée", terminee: "terminée" } as const;
@@ -46,6 +48,13 @@ export default async function AdminPage() {
       supabase.from("seasons").select("*").order("created_at"),
     ]);
 
+  // Dernière connexion : elle vit dans auth.users, pas dans les profils.
+  // Sert à savoir qui n'a jamais ouvert son lien d'invitation.
+  const { data: authUsers } = await createServiceClient().auth.admin.listUsers({ perPage: 200 });
+  const lastSignIn = new Map(
+    (authUsers?.users ?? []).map((u) => [u.id, u.last_sign_in_at ?? null]),
+  );
+
   const days = (matchdays ?? []) as (Matchday & { fixtures: Fixture[] })[];
   const allTeams = (teams ?? []) as Team[];
   const teamById = new Map(allTeams.map((t) => [t.id, t]));
@@ -67,6 +76,15 @@ export default async function AdminPage() {
   const betOn = new Set(((placed ?? []) as { fixture_id: number }[]).map((p) => p.fixture_id));
   const hasBets = (day: Matchday & { fixtures: Fixture[] }) =>
     day.fixtures.some((f) => betOn.has(f.id));
+
+  /** « il y a 3 j » — assez précis pour savoir qui relancer. */
+  const sinceLabel = (iso: string): string => {
+    const days = Math.floor((nowMs() - new Date(iso).getTime()) / 86_400_000);
+    if (days < 1) return "aujourd’hui";
+    if (days === 1) return "hier";
+    if (days < 30) return `il y a ${days} j`;
+    return `il y a ${Math.floor(days / 30)} mois`;
+  };
 
   const trackedOf = (seasonId: number) =>
     memberships.filter((m) => m.season_id === seasonId && m.tracked).length;
@@ -478,7 +496,19 @@ export default async function AdminPage() {
         <ul className="flex flex-col gap-1 text-sm">
           {members.map((m) => (
             <li key={m.id} className="flex items-center justify-between gap-2">
-              <span className={m.is_radie ? "line-through opacity-50" : ""}>{m.display_name}</span>
+              <span className="min-w-0">
+                <span className={m.is_radie ? "line-through opacity-50" : ""}>{m.display_name}</span>
+                {lastSignIn.has(m.id) &&
+                  (lastSignIn.get(m.id) ? (
+                    <span className="block text-[11px] text-faint">
+                      vu {sinceLabel(lastSignIn.get(m.id)!)}
+                    </span>
+                  ) : (
+                    <span className="block text-[11px] font-semibold text-warn">
+                      lien jamais ouvert
+                    </span>
+                  ))}
+              </span>
               {m.id !== profile.id && (
                 <form action={setRadiation}>
                   <input type="hidden" name="member_id" value={m.id} />
