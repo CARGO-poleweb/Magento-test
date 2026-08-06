@@ -35,4 +35,5 @@ export {
   Ban,
   Undo2,
   Mail,
+  Copy,
 } from "lucide-react";
