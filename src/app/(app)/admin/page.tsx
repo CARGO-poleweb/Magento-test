@@ -15,6 +15,7 @@ import {
 } from "@/app/actions";
 import { ApiSyncPanel } from "@/components/ApiSyncPanel";
 import { ImportCalendarForm } from "@/components/ImportCalendarForm";
+import { DeleteMemberPanel } from "@/components/DeleteMemberPanel";
 import { InviteLinkPanel } from "@/components/InviteLinkPanel";
 import { formatKickoff, getCurrentSeason, getSessionProfile } from "@/lib/data";
 import type { Fixture, Matchday, Profile, Season, Team } from "@/lib/types";
@@ -454,6 +455,21 @@ export default async function AdminPage() {
           dans l’app, sans mot de passe. S’il n’a pas encore de compte, il est créé au passage.
         </p>
         <InviteLinkPanel />
+
+        <details className="mt-4">
+          <summary className="cursor-pointer text-sm font-semibold text-danger">
+            Supprimer un compte définitivement
+          </summary>
+          <p className="mt-1 mb-2 text-xs text-muted">
+            Pour faire le ménage des comptes de test. Rien à voir avec la radiation
+            (article 3), qui garde l’historique : ici tout disparaît, sans retour possible.
+          </p>
+          <DeleteMemberPanel
+            members={members
+              .filter((m) => m.id !== profile.id)
+              .map((m) => ({ id: m.id, display_name: m.display_name }))}
+          />
+        </details>
       </section>
 
       {season && !season.bonus_reveles && (

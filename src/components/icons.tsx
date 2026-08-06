@@ -36,4 +36,5 @@ export {
   Undo2,
   Mail,
   Copy,
+  Trash2,
 } from "lucide-react";

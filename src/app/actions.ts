@@ -982,6 +982,81 @@ export async function createInviteLink(
   };
 }
 
+/**
+ * Suppression définitive d'un compte — pour faire le ménage des comptes de
+ * test. À distinguer de la radiation (article 3), qui garde l'historique.
+ *
+ * Tout ce qui appartient au membre part en cascade depuis auth.users :
+ * pronostics, bonus, cagnotte, messages, réactions, abonnements push. Deux
+ * choses n'y sont pas et doivent être traitées à la main :
+ *  - les fichiers du Vestiaire, que la base ne connaît que par leur URL ;
+ *  - les références d'arbitrage (qui a jugé, qui a inscrit une amende), qui
+ *    ne sont pas en cascade — sans ça, la suppression échouerait.
+ */
+export async function deleteMember(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { profile: president } = await getSessionProfile();
+  if (president.role !== "president") return { ok: false, title: "Réservé au Président (article 1)" };
+
+  const memberId = String(formData.get("member_id") ?? "");
+  const confirmation = String(formData.get("confirmation") ?? "").trim();
+  if (!memberId) return { ok: false, title: "Choisis d'abord un compte" };
+  if (memberId === president.id) {
+    return {
+      ok: false,
+      title: "On ne supprime pas son propre compte",
+      detail: "Il faudrait un autre Président pour le faire — et l'article 1 s'y oppose.",
+    };
+  }
+
+  const service = createServiceClient();
+  const { data: target } = await service
+    .from("profiles")
+    .select("display_name")
+    .eq("id", memberId)
+    .single();
+  if (!target) return { ok: false, title: "Compte introuvable" };
+
+  if (confirmation !== target.display_name) {
+    return {
+      ok: false,
+      title: "Confirmation incorrecte",
+      detail: `Recopie exactement « ${target.display_name} » pour confirmer.`,
+    };
+  }
+
+  // Les lignes partent en cascade, pas les fichiers : on les retire d'abord.
+  const { data: withPhotos } = await service
+    .from("messages")
+    .select("image_url")
+    .eq("member_id", memberId)
+    .not("image_url", "is", null);
+  const paths = ((withPhotos ?? []) as { image_url: string }[])
+    .map((m) => m.image_url.split("/vestiaire/")[1])
+    .filter(Boolean);
+  if (paths.length > 0) await service.storage.from("vestiaire").remove(paths);
+
+  // Ce que le compte a jugé ou inscrit revient au Président.
+  await service.from("predictions").update({ decided_by: null }).eq("decided_by", memberId);
+  await service.from("ledger").update({ created_by: president.id }).eq("created_by", memberId);
+  await service
+    .from("point_adjustments")
+    .update({ created_by: president.id })
+    .eq("created_by", memberId);
+
+  const { error } = await service.auth.admin.deleteUser(memberId);
+  if (error) return { ok: false, title: "Suppression impossible", detail: error.message };
+
+  revalidatePath("/", "layout");
+  return {
+    ok: true,
+    title: `Compte « ${target.display_name} » supprimé`,
+    detail: "Pronostics, bonus, cagnotte, messages et photos sont partis avec.",
+  };
+}
+
 export async function revealBonuses(): Promise<void> {
   await requirePresident();
   const service = createServiceClient();
