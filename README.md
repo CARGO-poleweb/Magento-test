@@ -43,12 +43,14 @@ PWA installable sur téléphone. Prévu pour ~20 membres, coût d'hébergement :
 2. Dans **SQL Editor**, exécutez dans l'ordre :
    - `supabase/migrations/0001_schema.sql`
    - `supabase/migrations/0002_seed.sql`
-3. Dans **Authentication → Email Templates → Magic Link**, remplacez le lien du gabarit par :
-   ```html
-   <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email">Se connecter</a>
-   ```
-4. Dans **Authentication → URL Configuration**, renseignez la **Site URL** de votre déploiement
-   (ex. `https://liguedescopains.vercel.app`).
+3. Dans **Authentication → URL Configuration** :
+   - **Site URL** : l'adresse de votre déploiement (ex. `https://liguedescopains.vercel.app`) ;
+   - **Redirect URLs** : ajoutez `https://liguedescopains.vercel.app/**` (la même adresse suivie
+     de `/**`).
+
+   Le gabarit d'e-mail par défaut de Supabase fonctionne tel quel — rien à modifier (l'édition
+   des gabarits exige désormais un SMTP personnalisé ; possible plus tard pour franciser le
+   message, pas nécessaire).
 
 ### 2. Déployer sur Vercel
 
