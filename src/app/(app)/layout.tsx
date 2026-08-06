@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { canJudge, getSessionProfile, ROLE_LABELS } from "@/lib/data";
+import { canJudge, getCurrentSeason, getSessionProfile, ROLE_LABELS } from "@/lib/data";
 import { TabLink, type TabIcon } from "@/components/TabLink";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -8,7 +8,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Pastilles : messages non lus au Vestiaire pour tous, dossiers en attente
   // pour les juges. Requêtes en parallèle — le layout s'exécute à chaque
   // navigation, chaque aller-retour compte.
-  const [pendingRes, readRes] = await Promise.all([
+  const [pendingRes, readRes, season] = await Promise.all([
     canJudge(profile.role)
       ? supabase
           .from("predictions")
@@ -16,6 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           .eq("status", "a_examiner")
       : Promise.resolve({ count: 0 }),
     supabase.from("chat_reads").select("last_read_at").eq("member_id", profile.id).maybeSingle(),
+    getCurrentSeason(supabase),
   ]);
   const plusBadge = pendingRes.count ?? 0;
 
@@ -36,17 +37,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col">
-      <header className="sticky top-0 z-10 border-b border-line bg-canvas/90 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+14px)] backdrop-blur">
+      {/* Bandeau d'identité : un aplat vert profond, pas un dégradé. Le contenu
+          vient chevaucher son bord arrondi, ce qui donne la profondeur. */}
+      <header className="rounded-b-[26px] bg-accent-deep px-5 pb-10 pt-[calc(env(safe-area-inset-top)+16px)] text-white">
         <Link href="/" className="block">
-          <h1 className="text-[15px] font-semibold tracking-tight">La Ligue des Copains</h1>
-          <p className="text-xs text-faint">
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/60">
+            {season?.name ?? "La Ligue"}
+          </p>
+          <h1 className="mt-0.5 text-xl font-semibold tracking-tight">La Ligue des Copains</h1>
+          <p className="mt-1 text-xs text-white/70">
             {profile.display_name} · {ROLE_LABELS[profile.role]}
             {profile.is_radie && " · radié"}
           </p>
         </Link>
       </header>
 
-      <main className="flex-1 px-4 pb-28 pt-5">{children}</main>
+      <main className="-mt-6 flex-1 px-4 pb-28">{children}</main>
 
       {/* pb-safe : la barre « home » des iPhone ne doit pas chevaucher les onglets */}
       <nav className="fixed inset-x-0 bottom-0 border-t border-line bg-surface/95 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 backdrop-blur">

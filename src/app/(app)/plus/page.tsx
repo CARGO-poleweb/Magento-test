@@ -29,10 +29,23 @@ export default async function PlusPage() {
     Icon: LucideIcon;
     label: string;
     detail: string;
+    tile: string;
     badge?: number;
   }[] = [
-    { href: "/bonus", Icon: Gift, label: "Bonus cachés", detail: "À sceller avant la deadline" },
-    { href: "/cagnotte", Icon: Wallet, label: "Cagnotte", detail: "Mises, amendes, Ballon d’Or" },
+    {
+      href: "/bonus",
+      Icon: Gift,
+      label: "Bonus cachés",
+      detail: "À sceller avant la deadline",
+      tile: "bg-bonus-soft text-bonus",
+    },
+    {
+      href: "/cagnotte",
+      Icon: Wallet,
+      label: "Cagnotte",
+      detail: "Mises, amendes, Ballon d’Or",
+      tile: "bg-money-soft text-money",
+    },
     ...(canJudge(profile.role)
       ? [
           {
@@ -43,6 +56,7 @@ export default async function PlusPage() {
               pendingCount > 0
                 ? `${pendingCount} dossier${pendingCount > 1 ? "s" : ""} à juger`
                 : "Rien à juger",
+            tile: "bg-justice-soft text-justice",
             badge: pendingCount,
           },
         ]
@@ -54,6 +68,7 @@ export default async function PlusPage() {
             Icon: Crown,
             label: "Espace du Président",
             detail: "Journées, résultats, membres, saisons",
+            tile: "bg-crown-soft text-crown",
           },
         ]
       : []),
@@ -70,13 +85,15 @@ export default async function PlusPage() {
             href={e.href}
             className="flex items-center gap-3 border-b border-line px-4 py-3.5 transition-colors last:border-b-0 hover:bg-subtle"
           >
-            <e.Icon size={19} strokeWidth={1.8} className="shrink-0 text-faint" aria-hidden />
+            <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${e.tile}`}>
+              <e.Icon size={18} strokeWidth={2} aria-hidden />
+            </span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-medium">{e.label}</span>
               <span className="block text-xs text-muted">{e.detail}</span>
             </span>
             {(e.badge ?? 0) > 0 && (
-              <span className="rounded-full bg-warn-soft px-2 py-0.5 text-xs font-medium text-warn">
+              <span className="rounded-full bg-danger px-2 py-0.5 text-xs font-bold text-white">
                 {e.badge}
               </span>
             )}
