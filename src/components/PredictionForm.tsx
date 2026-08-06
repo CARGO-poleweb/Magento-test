@@ -35,7 +35,7 @@ export function PredictionForm({
         <button
           type="submit"
           disabled={pending}
-          className="shrink-0 rounded-lg bg-accent text-white px-3 py-2 text-sm font-semibold hover:bg-accent-strong disabled:opacity-50"
+          className="shrink-0 rounded-lg bg-accent text-white transition-transform active:scale-95 px-3 py-2 text-sm font-semibold hover:bg-accent-strong disabled:opacity-50"
         >
           {pending ? "…" : "Parier"}
         </button>

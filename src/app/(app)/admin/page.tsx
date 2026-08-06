@@ -117,7 +117,7 @@ export default async function AdminPage() {
               <option value="classique">Classique (5 matchs)</option>
               <option value="multiplex">Multiplex — J1 & J34 (9 matchs)</option>
             </select>
-            <button className="rounded-lg bg-accent text-white px-3 py-2 text-sm font-semibold hover:bg-accent-strong">
+            <button className="rounded-lg bg-accent text-white transition-transform active:scale-95 px-3 py-2 text-sm font-semibold hover:bg-accent-strong">
               Créer
             </button>
           </form>
@@ -138,7 +138,7 @@ export default async function AdminPage() {
               {day.status === "brouillon" && day.fixtures.length > 0 && (
                 <form action={publishMatchday}>
                   <input type="hidden" name="matchday_id" value={day.id} />
-                  <button className="rounded-lg bg-accent text-white px-3 py-1.5 text-xs font-semibold hover:bg-accent-strong">
+                  <button className="rounded-lg bg-accent text-white transition-transform active:scale-95 px-3 py-1.5 text-xs font-semibold hover:bg-accent-strong">
                     Publier
                   </button>
                 </form>

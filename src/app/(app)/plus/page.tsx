@@ -83,7 +83,8 @@ export default async function PlusPage() {
           <Link
             key={e.href}
             href={e.href}
-            className="flex items-center gap-3 border-b border-line px-4 py-3.5 transition-colors last:border-b-0 hover:bg-subtle"
+            prefetch
+            className="flex items-center gap-3 border-b border-line px-4 py-3.5 transition-colors last:border-b-0 hover:bg-subtle active:bg-subtle"
           >
             <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${e.tile}`}>
               <e.Icon size={18} strokeWidth={2} aria-hidden />

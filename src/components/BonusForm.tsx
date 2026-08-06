@@ -49,7 +49,7 @@ export function BonusForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-accent text-white px-3 py-1.5 text-sm font-semibold hover:bg-accent-strong disabled:opacity-50"
+          className="rounded-lg bg-accent text-white transition-transform active:scale-95 px-3 py-1.5 text-sm font-semibold hover:bg-accent-strong disabled:opacity-50"
         >
           {pending ? "…" : current ? "Modifier" : "Sceller"}
         </button>

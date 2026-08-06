@@ -37,14 +37,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col">
-      {/* Bandeau d'identité : un aplat vert profond, pas un dégradé. Le contenu
-          vient chevaucher son bord arrondi, ce qui donne la profondeur. */}
-      <header className="rounded-b-[26px] bg-accent-deep px-5 pb-10 pt-[calc(env(safe-area-inset-top)+16px)] text-white">
-        <Link href="/" className="block">
-          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/60">
+      {/* Bandeau d'identité : vert profond avec les rayures d'une pelouse
+          fraîchement tondue, à peine perceptibles. Le contenu chevauche son
+          bord arrondi, ce qui crée la profondeur. */}
+      <header
+        className="relative overflow-hidden rounded-b-[28px] px-5 pb-11 pt-[calc(env(safe-area-inset-top)+16px)] text-white"
+        style={{
+          background:
+            "repeating-linear-gradient(115deg, rgba(255,255,255,0.045) 0 26px, rgba(255,255,255,0) 26px 52px), linear-gradient(150deg, #067a3e 0%, #04532b 62%, #033f21 100%)",
+        }}
+      >
+        <Link href="/" className="relative block">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">
             {season?.name ?? "La Ligue"}
           </p>
-          <h1 className="mt-0.5 text-xl font-semibold tracking-tight">La Ligue des Copains</h1>
+          <h1 className="mt-1 text-[22px] font-bold tracking-tight">La Ligue des Copains</h1>
           <p className="mt-1 text-xs text-white/70">
             {profile.display_name} · {ROLE_LABELS[profile.role]}
             {profile.is_radie && " · radié"}
@@ -52,10 +59,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </Link>
       </header>
 
-      <main className="-mt-6 flex-1 px-4 pb-28">{children}</main>
+      <main className="-mt-7 flex-1 px-4 pb-24">{children}</main>
 
-      {/* pb-safe : la barre « home » des iPhone ne doit pas chevaucher les onglets */}
-      <nav className="fixed inset-x-0 bottom-0 border-t border-line bg-surface/95 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 backdrop-blur">
+      {/* pb-safe : la barre « home » des iPhone ne doit pas chevaucher les
+          onglets — mais sans laisser un vide sous les libellés. */}
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 pb-[max(env(safe-area-inset-bottom),8px)] pt-1.5 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-3xl justify-around">
           {tabs.map((tab) => (
             <TabLink key={tab.href} {...tab} />
