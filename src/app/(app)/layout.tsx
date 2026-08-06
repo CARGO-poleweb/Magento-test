@@ -50,8 +50,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col">
       {/* En-tête compact et clair : une marque colorée porte l'identité, le
-          reste respire. Rien ne chevauche, rien n'est masqué. */}
-      <header className="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur-md">
+          reste respire. Rien ne chevauche, rien n'est masqué.
+          Fond opaque et sans flou : sur iOS, un backdrop-filter posé sur un
+          élément sticky ou fixed se décroche pendant le défilement — la barre
+          reste plantée au milieu de la page. */}
+      <header className="sticky top-0 z-20 transform-gpu border-b border-line bg-canvas">
         <div className="flex items-center gap-3 px-4 pb-2.5 pt-[calc(env(safe-area-inset-top)+10px)]">
           <Link href="/" className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent text-white">
             <Trophy size={18} strokeWidth={2.2} aria-hidden />
@@ -78,7 +81,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <main className="flex-1 px-4 pb-[calc(var(--nav-h)+20px)] pt-4">{children}</main>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 shadow-[0_-4px_16px_-12px_rgba(18,33,26,0.5)] backdrop-blur-md"
+        className="fixed inset-x-0 bottom-0 z-20 transform-gpu border-t border-line bg-surface shadow-[0_-4px_16px_-12px_rgba(18,33,26,0.5)]"
         style={{ paddingBottom: "var(--nav-safe)" }}
       >
         <div className="mx-auto flex h-[52px] w-full max-w-3xl items-stretch justify-around">

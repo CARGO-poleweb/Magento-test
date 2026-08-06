@@ -207,7 +207,7 @@ export function Chat({
       <form
         ref={formRef}
         onSubmit={onSubmit}
-        className="fixed inset-x-0 bottom-[var(--nav-h)] z-10 border-t border-line bg-surface/95 px-4 py-2.5 backdrop-blur-md"
+        className="fixed inset-x-0 bottom-[var(--nav-h)] z-10 transform-gpu border-t border-line bg-surface px-4 py-2.5"
       >
         <div className="mx-auto flex w-full max-w-3xl items-center gap-2">
           <label
