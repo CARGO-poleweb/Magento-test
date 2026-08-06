@@ -128,15 +128,20 @@ par le Président · pronostics structurés avec verrouillage H-30 · saisie des
 points du barème quotidien (dont multiplex) · classement général · dépôt scellé des bonus cachés
 (l'échéance du 30/09 impose de l'avoir au MVP).
 
-### Phase 2 — V1 « le règlement complet »
+### Phase 2 — V1 « le règlement complet + la vie de la ligue »
 Bonus individuel ×2 · Retour du Bâton avec binômes · cartons et blocage de journée · dossiers
 disciplinaires et bouton « Je conteste » · pénalités automatiques (art. 21-24) · notifications push
-(journée publiée, verrouillage imminent, résultats, sanctions) · fil d'activité.
+(journée publiée, verrouillage imminent, résultats, sanctions) · fil d'activité ·
+**médias : upload photos/vidéos** (Supabase Storage, compression côté client, limite de taille)
+avec notation communautaire idée /6 + réalisation /4 sous 48 h et **galerie souvenirs** par saison ·
+**Le Vestiaire** : chat de la ligue intégré (Supabase Realtime — messages, photos, réactions),
+avec rappel automatique de l'article 11 si un pronostic est posté dans le chat.
 
 ### Phase 3 — V2 « les évènements »
-Journée d'anniversaire (upload vidéo + notation 48 h) · Ensemble on est plus fort (tirage,
-bulletin scellé) · Combatif du mois (workflow + sondage) · Challenge · API résultats automatiques ·
-palmarès et statistiques de saison · page « Ballon d'Or ».
+Journée d'anniversaire complète (tirage de la date, workflow de notation branché sur le module
+médias) · Ensemble on est plus fort (tirage, bulletin scellé) · Combatif du mois (workflow +
+sondage) · Challenge · API résultats automatiques · palmarès et statistiques de saison · page
+« Ballon d'Or ».
 
 ---
 
