@@ -25,6 +25,18 @@ export async function middleware(request: NextRequest) {
     );
   }
 
+  // Rattrapage : quand l'adresse de retour n'est pas dans la liste blanche de
+  // Supabase (Authentication → URL Configuration), le jeton est déposé sur la
+  // racine du site au lieu de /auth/confirm — et l'utilisateur atterrit sur
+  // l'écran de connexion sans comprendre. On réachemine le jeton.
+  const params = request.nextUrl.searchParams;
+  const carriesToken = params.has("code") || (params.has("token_hash") && params.has("type"));
+  if (carriesToken && !request.nextUrl.pathname.startsWith("/auth/confirm")) {
+    const target = request.nextUrl.clone();
+    target.pathname = "/auth/confirm";
+    return NextResponse.redirect(target);
+  }
+
   const supabase = createServerClient(
     url!,
     anonKey!,
