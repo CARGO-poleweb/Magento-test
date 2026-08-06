@@ -18,22 +18,24 @@ export function InviteLinkPanel() {
 
   return (
     <div className="flex flex-col gap-2">
-      <form action={action} className="flex flex-wrap gap-2">
+      {/* Empilé sur mobile : à trois de front, le champ e-mail se retrouvait
+          écrasé à quelques pixels de large. */}
+      <form action={action} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <input
           name="email"
           type="email"
           required
           placeholder="president@exemple.fr"
-          className="min-w-0 flex-1 rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm"
+          className="w-full min-w-0 rounded-lg border border-line-strong bg-surface px-3 py-2 text-base sm:w-auto sm:flex-1 sm:text-sm"
         />
         <input
           name="display_name"
           placeholder="Prénom affiché"
-          className="w-36 rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm"
+          className="w-full min-w-0 rounded-lg border border-line-strong bg-surface px-3 py-2 text-base sm:w-36 sm:text-sm"
         />
         <button
           disabled={pending}
-          className="flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition-transform hover:bg-accent-strong active:scale-95 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition-transform hover:bg-accent-strong active:scale-95 disabled:opacity-50 sm:w-auto"
         >
           <Mail size={16} strokeWidth={2} aria-hidden />
           {pending ? "Génération…" : "Générer le lien"}

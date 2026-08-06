@@ -514,7 +514,7 @@ export default async function AdminPage() {
           </summary>
 
           <h3 className="mt-3 text-sm font-semibold">Créer une journée à la main</h3>
-          <form action={createMatchday} className="mt-2 flex gap-2">
+          <form action={createMatchday} className="mt-2 flex flex-wrap gap-2">
             <input
               name="number"
               type="number"
