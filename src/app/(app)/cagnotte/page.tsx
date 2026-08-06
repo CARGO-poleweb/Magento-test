@@ -34,9 +34,7 @@ export default async function CagnottePage() {
   return (
     <div className="flex flex-col gap-5">
       <header>
-        <h1 className="text-xl font-bold">
-          Cagnotte{season && <span className="text-sm font-normal text-muted"> · {season.name}</span>}
-        </h1>
+        <h2 className="text-lg font-semibold tracking-tight">Cagnotte</h2>
         <p className="text-xs text-muted">
           Article 2 : mise de {formatEuros(season?.mise_cents ?? 2000)} — article 3 : virement au
           Président avant le{" "}
@@ -46,27 +44,29 @@ export default async function CagnottePage() {
       </header>
 
       <section className="grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-xl border border-line bg-surface p-3">
-          <p className="text-lg font-black text-accent">
+        <div className="rounded-card border border-accent-line bg-accent-soft px-3 py-3">
+          <p className="text-lg font-bold leading-none text-accent-strong tabular">
             {formatEuros(paidCount * partVainqueur)}
           </p>
-          <p className="text-[11px] text-muted">Cagnotte vainqueur (15 € × {paidCount})</p>
+          <p className="mt-1.5 text-[11px] font-medium text-muted">Vainqueur</p>
         </div>
-        <div className="rounded-xl border border-line bg-surface p-3">
-          <p className="text-lg font-black text-warn">
+        <div className="rounded-card border border-money/25 bg-money-soft px-3 py-3">
+          <p className="text-lg font-bold leading-none text-money tabular">
             {formatEuros(paidCount * partBallonOr)}
           </p>
-          <p className="text-[11px] text-muted">Ballon d’Or (5 € × {paidCount})</p>
+          <p className="mt-1.5 text-[11px] font-medium text-muted">Ballon d’Or</p>
         </div>
-        <div className="rounded-xl border border-line bg-surface p-3">
-          <p className="text-lg font-black text-danger">{formatEuros(totalAmendes)}</p>
-          <p className="text-[11px] text-muted">Amendes</p>
+        <div className="rounded-card border border-danger-line bg-danger-soft px-3 py-3">
+          <p className="text-lg font-bold leading-none text-danger tabular">
+            {formatEuros(totalAmendes)}
+          </p>
+          <p className="mt-1.5 text-[11px] font-medium text-muted">Amendes</p>
         </div>
       </section>
 
       <section>
-        <h2 className="mb-2 font-bold">Qui a payé sa mise ?</h2>
-        <ul className="overflow-hidden rounded-xl border border-line">
+        <h2 className="mb-2 text-sm font-semibold">Qui a payé sa mise ?</h2>
+        <ul className="overflow-hidden rounded-card border border-line">
           {members.map((m) => (
             <li
               key={m.id}
@@ -94,8 +94,8 @@ export default async function CagnottePage() {
       </section>
 
       {isPresident && (
-        <section className="rounded-xl border border-line bg-surface p-4">
-          <h2 className="mb-2 font-bold">Infliger une amende</h2>
+        <section className="rounded-card border border-line bg-surface p-4 shadow-[0_2px_8px_-4px_rgba(18,33,26,0.12)]">
+          <h2 className="mb-2 text-sm font-semibold">Infliger une amende</h2>
           <form action={addAmende} className="flex flex-col gap-2">
             <select
               name="member_id"
@@ -129,7 +129,7 @@ export default async function CagnottePage() {
 
       {amendes.length > 0 && (
         <section>
-          <h2 className="mb-2 font-bold">Casier des amendes</h2>
+          <h2 className="mb-2 text-sm font-semibold">Casier des amendes</h2>
           <ul className="flex flex-col gap-1 text-sm">
             {amendes.map((e) => (
               <li key={e.id} className="flex justify-between gap-2 text-muted">

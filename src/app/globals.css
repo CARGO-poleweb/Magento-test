@@ -8,11 +8,11 @@
    couleur code une information.
 --------------------------------------------------------------------------- */
 @theme {
-  --color-canvas: #f2f5f1;
+  --color-canvas: #f7f9f6;
   --color-surface: #ffffff;
-  --color-subtle: #eef2ec;
-  --color-line: #e0e6dd;
-  --color-line-strong: #cbd6c6;
+  --color-subtle: #f1f4ef;
+  --color-line: #e7ebe4;
+  --color-line-strong: #d3dbcd;
 
   --color-ink: #12211a;
   --color-muted: #5d6c62;
@@ -56,6 +56,9 @@
 
 :root {
   color-scheme: light;
+  /* Hauteur de la barre d'onglets : sert à caler tout ce qui doit vivre
+     juste au-dessus (barre de saisie du Vestiaire, fin de page). */
+  --nav-h: calc(54px + max(env(safe-area-inset-bottom), 8px));
 }
 
 body {

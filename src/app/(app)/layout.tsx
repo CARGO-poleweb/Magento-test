@@ -1,6 +1,18 @@
 import Link from "next/link";
+import { Trophy } from "@/components/icons";
 import { canJudge, getCurrentSeason, getSessionProfile, ROLE_LABELS } from "@/lib/data";
 import { TabLink, type TabIcon } from "@/components/TabLink";
+
+/** Initiales pour la pastille de profil (« Pierre M. » → « PM »). */
+function initials(name: string): string {
+  return name
+    .replace(/[^\p{L}\s.]/gu, " ")
+    .split(/[\s.]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join("");
+}
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { supabase, profile } = await getSessionProfile();
@@ -37,34 +49,36 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col">
-      {/* Bandeau d'identité : vert profond avec les rayures d'une pelouse
-          fraîchement tondue, à peine perceptibles. Le contenu chevauche son
-          bord arrondi, ce qui crée la profondeur. */}
-      <header
-        className="relative overflow-hidden rounded-b-[28px] px-5 pb-11 pt-[calc(env(safe-area-inset-top)+16px)] text-white"
-        style={{
-          background:
-            "repeating-linear-gradient(115deg, rgba(255,255,255,0.045) 0 26px, rgba(255,255,255,0) 26px 52px), linear-gradient(150deg, #067a3e 0%, #04532b 62%, #033f21 100%)",
-        }}
-      >
-        <Link href="/" className="relative block">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">
-            {season?.name ?? "La Ligue"}
-          </p>
-          <h1 className="mt-1 text-[22px] font-bold tracking-tight">La Ligue des Copains</h1>
-          <p className="mt-1 text-xs text-white/70">
-            {profile.display_name} · {ROLE_LABELS[profile.role]}
-            {profile.is_radie && " · radié"}
-          </p>
-        </Link>
+      {/* En-tête compact et clair : une marque colorée porte l'identité, le
+          reste respire. Rien ne chevauche, rien n'est masqué. */}
+      <header className="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur-md">
+        <div className="flex items-center gap-3 px-4 pb-2.5 pt-[calc(env(safe-area-inset-top)+10px)]">
+          <Link href="/" className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent text-white">
+            <Trophy size={18} strokeWidth={2.2} aria-hidden />
+            <span className="sr-only">Accueil</span>
+          </Link>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[15px] font-semibold leading-tight tracking-tight">
+              La Ligue des Copains
+            </p>
+            <p className="truncate text-[11px] leading-tight text-faint">
+              {season?.name ?? "Aucune saison"} · {ROLE_LABELS[profile.role]}
+              {profile.is_radie && " · radié"}
+            </p>
+          </div>
+          <span
+            className="grid size-9 shrink-0 place-items-center rounded-full bg-accent-soft text-[11px] font-bold text-accent-strong"
+            title={profile.display_name}
+          >
+            {initials(profile.display_name)}
+          </span>
+        </div>
       </header>
 
-      <main className="-mt-7 flex-1 px-4 pb-24">{children}</main>
+      <main className="flex-1 px-4 pb-[calc(var(--nav-h)+20px)] pt-4">{children}</main>
 
-      {/* pb-safe : la barre « home » des iPhone ne doit pas chevaucher les
-          onglets — mais sans laisser un vide sous les libellés. */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 pb-[max(env(safe-area-inset-bottom),8px)] pt-1.5 backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-3xl justify-around">
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 pb-[max(env(safe-area-inset-bottom),8px)] backdrop-blur-md">
+        <div className="mx-auto flex h-[54px] w-full max-w-3xl items-center justify-around">
           {tabs.map((tab) => (
             <TabLink key={tab.href} {...tab} />
           ))}

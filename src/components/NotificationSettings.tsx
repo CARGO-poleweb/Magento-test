@@ -83,7 +83,7 @@ export function NotificationSettings({
   }
 
   return (
-    <div className="rounded-xl border border-line bg-surface p-4">
+    <div className="rounded-card border border-line bg-surface p-4 shadow-[0_2px_8px_-4px_rgba(18,33,26,0.12)]">
       <h2 className="text-sm font-semibold">Notifications</h2>
       <p className="mt-1 text-xs text-muted">
         Sois prévenu quand une journée est publiée, quand les points tombent, quand la Commission
