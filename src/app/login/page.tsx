@@ -30,7 +30,7 @@ export default function LoginPage() {
       <div className="text-center">
         <p className="text-5xl">🏆</p>
         <h1 className="mt-3 text-3xl font-black tracking-tight">La Ligue des Copains</h1>
-        <p className="mt-1 text-sm text-neutral-400">Ligue 1 · 2025-2026 · Plaisir !!!</p>
+        <p className="mt-1 text-sm text-neutral-400">Ligue 1 · Plaisir !!!</p>
       </div>
 
       {state === "sent" ? (
