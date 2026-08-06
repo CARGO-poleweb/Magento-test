@@ -55,24 +55,24 @@ export default async function PlusPage() {
     <div className="flex flex-col gap-4">
       <h1 className="text-xl font-bold">Plus</h1>
 
-      <nav className="overflow-hidden rounded-xl border border-neutral-800">
+      <nav className="overflow-hidden rounded-xl border border-[#e2e9dd]">
         {entries.map((e) => (
           <Link
             key={e.href}
             href={e.href}
-            className="flex items-center gap-3 border-b border-neutral-800 bg-neutral-900/50 px-4 py-3 last:border-b-0 hover:bg-neutral-900"
+            className="flex items-center gap-3 border-b border-[#e2e9dd] bg-white px-4 py-3 last:border-b-0 hover:bg-[#eef4ea]"
           >
             <span className="text-xl">{e.icon}</span>
             <span className="min-w-0 flex-1">
               <span className="block font-semibold">{e.label}</span>
-              <span className="block text-xs text-neutral-500">{e.detail}</span>
+              <span className="block text-xs text-[#75897a]">{e.detail}</span>
             </span>
             {"badge" in e && (e.badge ?? 0) > 0 && (
-              <span className="rounded-full bg-amber-800 px-2 py-0.5 text-xs font-bold text-amber-100">
+              <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">
                 {e.badge}
               </span>
             )}
-            <span className="text-neutral-600">›</span>
+            <span className="text-[#8b9c8d]">›</span>
           </Link>
         ))}
       </nav>
@@ -83,14 +83,14 @@ export default async function PlusPage() {
         initialJeu={notifSettings?.jeu ?? true}
       />
 
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 text-xs text-neutral-500">
-        Connecté en tant que <span className="text-neutral-300">{profile.display_name}</span>. La
+      <div className="rounded-xl border border-[#e2e9dd] bg-white p-4 text-xs text-[#75897a]">
+        Connecté en tant que <span className="text-[#3a4d40]">{profile.display_name}</span>. La
         session reste active tant que tu ne te déconnectes pas — pas besoin de refaire le lien
         magique.
       </div>
 
       <form action={signOut}>
-        <button className="w-full rounded-xl border border-red-900/60 px-4 py-3 text-sm font-semibold text-red-400 hover:bg-red-950/40">
+        <button className="w-full rounded-xl border border-[#f6c9c2] px-4 py-3 text-sm font-semibold text-red-600 hover:bg-[#fde9e6]">
           Se déconnecter
         </button>
       </form>

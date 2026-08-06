@@ -13,15 +13,17 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0a",
+  themeColor: "#15803d",
   width: "device-width",
   initialScale: 1,
+  // Nécessaire pour que la zone de sécurité (barre « home » iPhone) soit gérée.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr">
-      <body className="min-h-dvh bg-neutral-950 text-neutral-100 antialiased">{children}</body>
+      <body className="min-h-dvh text-[#14251b] antialiased">{children}</body>
     </html>
   );
 }

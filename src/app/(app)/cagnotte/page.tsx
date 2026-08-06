@@ -35,9 +35,9 @@ export default async function CagnottePage() {
     <div className="flex flex-col gap-5">
       <header>
         <h1 className="text-xl font-bold">
-          Cagnotte{season && <span className="text-sm font-normal text-neutral-500"> · {season.name}</span>}
+          Cagnotte{season && <span className="text-sm font-normal text-[#75897a]"> · {season.name}</span>}
         </h1>
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-[#75897a]">
           Article 2 : mise de {formatEuros(season?.mise_cents ?? 2000)} — article 3 : virement au
           Président avant le{" "}
           {season ? dateFmt.format(new Date(season.paiement_deadline)) : "(saison à créer)"}, sous
@@ -46,47 +46,47 @@ export default async function CagnottePage() {
       </header>
 
       <section className="grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-3">
-          <p className="text-lg font-black text-green-400">
+        <div className="rounded-xl border border-[#e2e9dd] bg-white p-3">
+          <p className="text-lg font-black text-green-700">
             {formatEuros(paidCount * partVainqueur)}
           </p>
-          <p className="text-[11px] text-neutral-500">Cagnotte vainqueur (15 € × {paidCount})</p>
+          <p className="text-[11px] text-[#75897a]">Cagnotte vainqueur (15 € × {paidCount})</p>
         </div>
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-3">
-          <p className="text-lg font-black text-amber-400">
+        <div className="rounded-xl border border-[#e2e9dd] bg-white p-3">
+          <p className="text-lg font-black text-amber-700">
             {formatEuros(paidCount * partBallonOr)}
           </p>
-          <p className="text-[11px] text-neutral-500">Ballon d’Or (5 € × {paidCount})</p>
+          <p className="text-[11px] text-[#75897a]">Ballon d’Or (5 € × {paidCount})</p>
         </div>
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-3">
-          <p className="text-lg font-black text-red-400">{formatEuros(totalAmendes)}</p>
-          <p className="text-[11px] text-neutral-500">Amendes</p>
+        <div className="rounded-xl border border-[#e2e9dd] bg-white p-3">
+          <p className="text-lg font-black text-red-600">{formatEuros(totalAmendes)}</p>
+          <p className="text-[11px] text-[#75897a]">Amendes</p>
         </div>
       </section>
 
       <section>
         <h2 className="mb-2 font-bold">Qui a payé sa mise ?</h2>
-        <ul className="overflow-hidden rounded-xl border border-neutral-800">
+        <ul className="overflow-hidden rounded-xl border border-[#e2e9dd]">
           {members.map((m) => (
             <li
               key={m.id}
-              className="flex items-center justify-between gap-2 border-b border-neutral-800 px-3 py-2 text-sm last:border-b-0"
+              className="flex items-center justify-between gap-2 border-b border-[#e2e9dd] px-3 py-2 text-sm last:border-b-0"
             >
               <span>
                 {m.display_name}
-                {m.id === profile.id && <span className="ml-1 text-xs text-green-500">(toi)</span>}
+                {m.id === profile.id && <span className="ml-1 text-xs text-green-600">(toi)</span>}
               </span>
               {paidIds.has(m.id) ? (
-                <span className="text-xs text-green-400">✅ payé</span>
+                <span className="text-xs text-green-700">✅ payé</span>
               ) : isPresident ? (
                 <form action={recordMise}>
                   <input type="hidden" name="member_id" value={m.id} />
-                  <button className="rounded-lg border border-green-800 px-2 py-1 text-xs text-green-400 hover:bg-green-950">
+                  <button className="rounded-lg border border-[#9fdcb0] px-2 py-1 text-xs text-green-700 hover:bg-[#dcf5e0]">
                     Marquer payé
                   </button>
                 </form>
               ) : (
-                <span className="text-xs text-red-400">❌ pas encore</span>
+                <span className="text-xs text-red-600">❌ pas encore</span>
               )}
             </li>
           ))}
@@ -94,12 +94,12 @@ export default async function CagnottePage() {
       </section>
 
       {isPresident && (
-        <section className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
+        <section className="rounded-xl border border-[#e2e9dd] bg-white p-4">
           <h2 className="mb-2 font-bold">Infliger une amende</h2>
           <form action={addAmende} className="flex flex-col gap-2">
             <select
               name="member_id"
-              className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
+              className="rounded-lg border border-[#bcd9c2] bg-white px-3 py-2 text-sm"
             >
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -112,15 +112,15 @@ export default async function CagnottePage() {
                 name="euros"
                 inputMode="decimal"
                 placeholder="Montant (€)"
-                className="w-28 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
+                className="w-28 rounded-lg border border-[#bcd9c2] bg-white px-3 py-2 text-sm"
               />
               <input
                 name="note"
                 placeholder="Motif"
-                className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
+                className="min-w-0 flex-1 rounded-lg border border-[#bcd9c2] bg-white px-3 py-2 text-sm"
               />
             </div>
-            <button className="self-start rounded-lg bg-red-800 px-3 py-1.5 text-sm font-semibold hover:bg-red-700">
+            <button className="self-start rounded-lg bg-red-600 text-white px-3 py-1.5 text-sm font-semibold hover:bg-red-500">
               Ajouter l’amende
             </button>
           </form>
@@ -132,12 +132,12 @@ export default async function CagnottePage() {
           <h2 className="mb-2 font-bold">Casier des amendes</h2>
           <ul className="flex flex-col gap-1 text-sm">
             {amendes.map((e) => (
-              <li key={e.id} className="flex justify-between gap-2 text-neutral-400">
+              <li key={e.id} className="flex justify-between gap-2 text-[#5c7263]">
                 <span>
                   {members.find((m) => m.id === e.member_id)?.display_name ?? "?"} —{" "}
                   {e.note ?? "amende"}
                 </span>
-                <span className="text-red-400">{formatEuros(e.amount_cents)}</span>
+                <span className="text-red-600">{formatEuros(e.amount_cents)}</span>
               </li>
             ))}
           </ul>

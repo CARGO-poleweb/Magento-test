@@ -30,18 +30,18 @@ export default function LoginPage() {
       <div className="text-center">
         <p className="text-5xl">🏆</p>
         <h1 className="mt-3 text-3xl font-black tracking-tight">La Ligue des Copains</h1>
-        <p className="mt-1 text-sm text-neutral-400">Ligue 1 · Plaisir !!!</p>
+        <p className="mt-1 text-sm text-[#5c7263]">Ligue 1 · Plaisir !!!</p>
       </div>
 
       {state === "sent" ? (
-        <div className="w-full max-w-sm rounded-xl border border-green-900 bg-green-950/50 p-4 text-center text-sm">
+        <div className="w-full max-w-sm rounded-xl border border-[#bfe8ca] bg-[#dcf5e0] p-4 text-center text-sm">
           📬 Lien de connexion envoyé à <span className="font-semibold">{email}</span>.
           <br />
           Ouvre l’e-mail depuis ton téléphone et clique sur le lien.
         </div>
       ) : (
         <form onSubmit={sendMagicLink} className="flex w-full max-w-sm flex-col gap-3">
-          <label htmlFor="email" className="text-sm text-neutral-300">
+          <label htmlFor="email" className="text-sm text-[#3a4d40]">
             Ton e-mail (pas de mot de passe, on t’envoie un lien magique)
           </label>
           <input
@@ -51,20 +51,20 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="greg@exemple.fr"
-            className="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-3 text-base outline-none focus:border-green-600"
+            className="rounded-lg border border-[#bcd9c2] bg-white px-4 py-3 text-base outline-none focus:border-green-600"
           />
           <button
             type="submit"
             disabled={state === "sending"}
-            className="rounded-lg bg-green-700 px-4 py-3 font-semibold hover:bg-green-600 disabled:opacity-50"
+            className="rounded-lg bg-green-600 text-white px-4 py-3 font-semibold hover:bg-green-500 disabled:opacity-50"
           >
             {state === "sending" ? "Envoi…" : "Recevoir mon lien de connexion"}
           </button>
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
         </form>
       )}
 
-      <p className="max-w-sm text-center text-xs text-neutral-500">
+      <p className="max-w-sm text-center text-xs text-[#75897a]">
         Article 4 : 20 membres maximum. Si la ligue est pleine, l’inscription sera refusée — voir
         avec le Président (qui a toujours raison).
       </p>
