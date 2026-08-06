@@ -48,6 +48,9 @@ export default async function AdminPage() {
   const allSeasons = (seasons ?? []) as Season[];
   const memberships = (seasonTeams ?? []) as { season_id: number; team_id: number; tracked: boolean }[];
 
+  const trackedOf = (seasonId: number) =>
+    memberships.filter((m) => m.season_id === seasonId && m.tracked).length;
+
   const currentMemberships = season ? memberships.filter((m) => m.season_id === season.id) : [];
   const currentTeams = currentMemberships
     .map((m) => ({ team: teamById.get(m.team_id), tracked: m.tracked }))
@@ -327,8 +330,8 @@ export default async function AdminPage() {
                   <p className="text-sm font-semibold">
                     {s.name}{" "}
                     {s.is_current ? (
-                      <span className="rounded bg-green-900/60 px-1.5 py-0.5 text-[11px] text-accent-strong">
-                        en cours
+                      <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-white">
+                        en cours · {trackedCount}/5 ★
                       </span>
                     ) : (
                       <span className="rounded bg-subtle px-1.5 py-0.5 text-[11px] text-muted">
@@ -346,10 +349,12 @@ export default async function AdminPage() {
                   )}
                 </div>
 
-                {!s.is_current && (
-                  <details className="mt-2">
+                {(
+                  <details className="mt-2" open={s.is_current && trackedOf(s.id) < 5}>
                     <summary className="cursor-pointer text-xs text-muted">
-                      Composer la Ligue 1 de cette saison
+                      {s.is_current
+                        ? `Équipes concernées ★ : ${trackedOf(s.id)}/5 — ajuster la composition`
+                        : "Composer la Ligue 1 de cette saison"}
                     </summary>
                     <form action={saveSeasonTeams} className="mt-2">
                       <input type="hidden" name="season_id" value={s.id} />
