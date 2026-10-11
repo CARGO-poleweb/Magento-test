@@ -27,6 +27,10 @@ export function openDb(path) {
       created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
     );
     CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS item_history (
+      key TEXT PRIMARY KEY, name TEXT NOT NULL, unit TEXT DEFAULT '', qty REAL,
+      uses INTEGER NOT NULL DEFAULT 1, last_used INTEGER NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE, password_hash TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'member', created_at INTEGER NOT NULL, last_login INTEGER
@@ -122,8 +126,17 @@ export class Store {
   // ----- shopping -----
   listItems() { return this.db.prepare("SELECT * FROM shopping_items ORDER BY checked, position, name").all().map(rowItem); }
   getItem(id) { return rowItem(this.db.prepare("SELECT * FROM shopping_items WHERE id = ?").get(id)); }
+  recordHistory(name, unit = "", qty = null) {
+    const key = String(name).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+    if (!key) return;
+    this.db.prepare(`INSERT INTO item_history (key, name, unit, qty, uses, last_used) VALUES (?, ?, ?, ?, 1, ?)
+      ON CONFLICT(key) DO UPDATE SET name = excluded.name, unit = excluded.unit, qty = excluded.qty, uses = uses + 1, last_used = excluded.last_used`)
+      .run(key, String(name).trim(), unit || "", qty ?? null, Date.now());
+  }
+  listHistory(limit = 24) { return this.db.prepare("SELECT name, unit, qty, uses, last_used FROM item_history ORDER BY last_used DESC LIMIT ?").all(limit); }
   addItem(it) {
     const now = Date.now();
+    if ((it.src || "manual") === "manual") this.recordHistory(it.name, it.unit, it.qty);
     const pos = it.position ?? (this.db.prepare("SELECT COALESCE(MAX(position), 0) AS m FROM shopping_items").get().m | 0) + 1;
     const row = { id: uid(), name: String(it.name).trim(), qty: it.qty ?? null, unit: it.unit || "", checked: it.checked ? 1 : 0,
       src: it.src || "manual", recipes: JSON.stringify(it.recipes || []), position: pos, created_at: now, updated_at: now };
@@ -190,6 +203,7 @@ export class Store {
       categories: this.listCategories(),
       items: this.listItems(),
       shoppingMeta: this.getKv("shopping_meta", null),
+      history: this.listHistory(),
     };
   }
   exportAll() { return { exportedAt: new Date().toISOString(), ...this.snapshot() }; }
