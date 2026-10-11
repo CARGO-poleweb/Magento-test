@@ -143,7 +143,9 @@ const LinesSchema = z.object({ ingredients: z.array(Ingredient) });
 
 function client() {
   if (!process.env.ANTHROPIC_API_KEY) return null;
-  return new Anthropic();
+  // Une clé « utilisateur » (sk-ant-usr-…) doit nommer l'espace de travail ; une clé d'espace de travail n'en a pas besoin.
+  const ws = process.env.ANTHROPIC_WORKSPACE_ID;
+  return new Anthropic(ws ? { defaultHeaders: { "anthropic-workspace-id": ws } } : {});
 }
 export const claudeAvailable = () => !!process.env.ANTHROPIC_API_KEY;
 const MODEL = () => process.env.CLAUDE_MODEL || "claude-opus-5-5";
