@@ -140,10 +140,16 @@ test("articles : ajout manuel, coche, modification de quantité, régénération
   const upd = await call("/api/shopping/items/" + add.data.id, { method: "PATCH", body: { checked: true, qtyText: "2 rouleaux" } });
   assert.equal(upd.data.checked, true); assert.equal(upd.data.qty, 2); assert.equal(upd.data.unit, "rouleau");
   const id = (await call("/api/state")).data.recipes.find((r) => r.title.startsWith("Gratin")).id;
-  await call("/api/shopping/generate", { method: "POST", body: { selection: [{ recipeId: id, persons: 6 }] } });
-  const items = (await call("/api/state")).data.items;
+  const before = (await call("/api/state")).data.items.find((i) => i.name === "beurre").qty; // 100
+  await call("/api/shopping/generate", { method: "POST", body: { selection: [{ recipeId: id, persons: 6 }] } }); // ajout par défaut
+  let items = (await call("/api/state")).data.items;
+  assert.equal(items.find((i) => i.name === "beurre").qty, before + 30, "ajout : les quantités s'additionnent");
+  assert.equal(items.filter((i) => i.name === "beurre").length, 1, "pas de doublon");
+  assert.ok(items.some((i) => i.name === "œufs"), "les anciens articles restent");
+  await call("/api/shopping/generate", { method: "POST", body: { selection: [{ recipeId: id, persons: 6 }], mode: "replace" } });
+  items = (await call("/api/state")).data.items;
   assert.ok(items.some((i) => i.name === "papier alu" && i.checked));
-  assert.ok(!items.some((i) => i.name === "œufs"), "les anciens articles de recette ont été remplacés");
+  assert.ok(!items.some((i) => i.name === "œufs"), "remplacement explicite : les anciens articles de recette partent");
   await call("/api/shopping/clear", { method: "POST", body: { onlyChecked: true } });
   assert.ok(!(await call("/api/state")).data.items.some((i) => i.name === "papier alu"));
 });

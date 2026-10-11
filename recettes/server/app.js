@@ -5,7 +5,7 @@ import { mkdirSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
 import { extractRecipe, extractFromText, extractFromPhotos, claudeAvailable, ExtractError } from "./extract.js";
 import { hashPassword, verifyPassword, passwordProblem } from "./auth.js";
 import { uid } from "./db.js";
-import { mergeIngredients, parseIngredientLine } from "../public/js/ingredients.js";
+import { mergeIngredients, parseIngredientLine, norm } from "../public/js/ingredients.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -138,12 +138,22 @@ app.post("/api/shopping/generate", (req, res) => {
   if (!recipes.length) return bad(res, "Aucune recette sélectionnée.");
   const items = mergeIngredients(recipes, selection);
   const sources = recipes.map((r) => ({ id: r.id, title: r.title, persons: selection[r.id] }));
-  if (req.body?.mode === "append") {
-    store.transaction(() => { for (const it of items) store.addItem({ ...it, src: "recipe" }); });
-    const meta = store.getKv("shopping_meta", { sources: [] });
-    store.setKv("shopping_meta", { sources: [...(meta.sources || []), ...sources], generatedAt: Date.now() });
-  } else {
+  if (req.body?.mode === "replace") {
     store.replaceRecipeItems(items, sources);
+  } else {
+    // ajout : fusion avec les articles non cochés déjà présents (même nom + même unité)
+    store.transaction(() => {
+      const existing = new Map(store.listItems().filter((i) => !i.checked).map((i) => [norm(i.name) + "|" + norm(i.unit), i]));
+      for (const it of items) {
+        const ex = existing.get(norm(it.name) + "|" + norm(it.unit));
+        if (ex) {
+          const qty = ex.qty == null && it.qty == null ? null : Math.round(((ex.qty || 0) + (it.qty || 0)) * 100) / 100;
+          store.updateItem(ex.id, { qty, recipes: [...new Set([...(ex.recipes || []), ...it.recipes])], src: "recipe" });
+        } else store.addItem({ ...it, src: "recipe" });
+      }
+      const meta = store.getKv("shopping_meta", { sources: [] });
+      store.setKv("shopping_meta", { sources: [...(meta.sources || []), ...sources], generatedAt: Date.now() });
+    });
   }
   broadcast();
   res.json({ ok: true, count: items.length });
