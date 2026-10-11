@@ -496,7 +496,11 @@ function renderThumbs() {
   $("#f-photo-count").textContent = photos.length ? `${photos.length} / ${MAX_PHOTOS}` : "";
   const full = photos.length >= MAX_PHOTOS; $("#btn-camera").disabled = full; $("#btn-gallery").disabled = full;
 }
-$("#f-thumbs").addEventListener("click", (e) => { const b = e.target.closest(".rm"); if (!b) return; photos.splice(Number(b.dataset.i), 1); renderThumbs(); });
+$("#f-thumbs").addEventListener("click", (e) => {
+  const b = e.target.closest(".rm"); if (!b) return;
+  photos.splice(Number(b.dataset.i), 1); renderThumbs();
+  const st = $("#add-status"); st.className = "status"; st.textContent = photos.length ? `${photos.length} photo${photos.length > 1 ? "s" : ""} prête${photos.length > 1 ? "s" : ""}.` : "";
+});
 $("#btn-toggle-photo").addEventListener("click", () => {
   const w = $("#f-photo-wrap"); w.hidden = !w.hidden;
   if (!w.hidden && !S.claude) { $("#add-status").className = "status err"; $("#add-status").textContent = "La lecture de photos demande une clé API Claude sur le serveur (voir Réglages > Serveur)."; }
