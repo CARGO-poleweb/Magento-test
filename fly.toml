@@ -1,0 +1,36 @@
+# Configuration Fly.io — Le Garde-Manger
+# Remplace "garde-manger-NOM" par le nom choisi à la création de l'app (fly apps create).
+app = "garde-manger-NOM"
+primary_region = "cdg"   # Paris
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "3000"
+  DB_PATH = "/app/data/garde-manger.db"
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"    # la machine s'éteint quand personne n'est connecté…
+  auto_start_machines = true     # …et se rallume à la première requête (1 à 2 s)
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/api/me"
+
+# Disque persistant : base SQLite + photos. Sans lui, tout serait perdu à chaque déploiement.
+[[mounts]]
+  source = "data"
+  destination = "/app/data"
+  initial_size = "1gb"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
