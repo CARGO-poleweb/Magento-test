@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Le Garde-Manger</title>
+<meta name="theme-color" content="#23724a">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<div class="login" id="login" hidden>
+  <form id="form-login" autocomplete="on">
+    <h1>Le Garde-Manger</h1>
+    <p>Carnet de recettes et liste de courses partagés. Entre le mot de passe de la maison.</p>
+    <div class="field">
+      <label for="l-pass">Mot de passe</label>
+      <input id="l-pass" type="password" autocomplete="current-password" required>
+    </div>
+    <div class="status err" id="login-status"></div>
+    <button class="btn primary" type="submit">Entrer</button>
+  </form>
+</div>
+
+<div class="app" id="app" hidden>
+  <header class="topbar">
+    <div class="topbar-in">
+      <div class="brand">
+        <h1>Le Garde-Manger</h1>
+        <span class="sync" id="sync" title="État de la synchronisation">connexion…</span>
+      </div>
+      <nav class="tabs-desktop" role="tablist" aria-label="Sections">
+        <button role="tab" data-tab="recipes" aria-selected="true">Recettes</button>
+        <button role="tab" data-tab="list" aria-selected="false">Courses <span class="badge" data-badge hidden></span></button>
+        <button role="tab" data-tab="settings" aria-selected="false">Réglages</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section data-view="recipes">
+      <div class="section-head">
+        <div>
+          <h2>Nos recettes</h2>
+          <p id="recipes-count">Chargement…</p>
+        </div>
+        <button class="btn primary" id="btn-add">+ Ajouter une recette</button>
+      </div>
+      <input class="search" id="search" type="search" placeholder="Rechercher une recette ou un ingrédient…" aria-label="Rechercher">
+      <div class="chips" id="chips" role="group" aria-label="Filtrer par catégorie"></div>
+      <div class="recipes" id="recipes"></div>
+    </section>
+
+    <section data-view="list" hidden>
+      <div class="section-head">
+        <div>
+          <h2>Liste de courses</h2>
+          <p>Partagée entre vos appareils, mise à jour en direct.</p>
+        </div>
+        <button class="btn sm ghost" id="btn-goto-recipes">Choisir des recettes</button>
+      </div>
+      <div class="listmeta" id="listmeta"></div>
+      <form class="addrow" id="form-additem" autocomplete="off">
+        <input id="additem" placeholder="Ajouter un article (ex. 6 œufs, papier alu…)" aria-label="Nouvel article">
+        <button class="btn basket" type="submit">Ajouter</button>
+      </form>
+      <div id="list-body"></div>
+      <div class="listacts" id="listacts" hidden>
+        <button class="btn sm" id="btn-clear-done">Retirer les articles cochés</button>
+        <button class="btn sm danger" id="btn-clear-all">Vider la liste</button>
+      </div>
+    </section>
+
+    <section data-view="settings" hidden>
+      <div class="section-head">
+        <div>
+          <h2>Réglages</h2>
+          <p>Catégories, sauvegarde et état du serveur.</p>
+        </div>
+        <button class="btn sm ghost" id="btn-logout">Se déconnecter</button>
+      </div>
+      <div class="subtabs" role="tablist">
+        <button role="tab" data-sub="cats" aria-selected="true">Catégories</button>
+        <button role="tab" data-sub="backup" aria-selected="false">Sauvegarde</button>
+        <button role="tab" data-sub="status" aria-selected="false">Serveur</button>
+      </div>
+
+      <div data-sub-view="cats">
+        <form class="addrow" id="form-addcat" autocomplete="off">
+          <input id="addcat" placeholder="Nouvelle catégorie (ex. Plats, Desserts, Apéro)" aria-label="Nouvelle catégorie">
+          <button class="btn primary" type="submit">Créer</button>
+        </form>
+        <ul class="catlist" id="catlist"></ul>
+        <p class="status">Une catégorie se crée aussi en l'écrivant directement dans une recette. Les flèches changent l'ordre d'affichage.</p>
+      </div>
+
+      <div data-sub-view="backup" hidden>
+        <div class="card-block">
+          <h3>Exporter</h3>
+          <p>Télécharge toutes les recettes et catégories dans un fichier JSON, à garder au chaud.</p>
+          <div><a class="btn" href="/api/admin/export" download>Télécharger la sauvegarde</a></div>
+        </div>
+        <div class="card-block">
+          <h3>Importer</h3>
+          <p>Recharge un fichier de sauvegarde. Les recettes existantes avec le même identifiant sont mises à jour, les autres ajoutées.</p>
+          <div><input type="file" id="import-file" accept="application/json,.json"></div>
+          <div class="status" id="import-status"></div>
+        </div>
+      </div>
+
+      <div data-sub-view="status" hidden>
+        <dl class="kv" id="status-kv"></dl>
+        <h3 style="margin:18px 0 8px;font-size:1.05rem">Derniers imports</h3>
+        <div class="table-wrap"><table class="log" id="import-log"></table></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="selbar" id="selbar" hidden>
+    <div class="selbar-in">
+      <div class="txt"><b id="sel-count"></b><span id="sel-detail"></span></div>
+      <button class="btn ghost sm" id="btn-unselect">Annuler</button>
+      <button class="btn basket" id="btn-generate">Générer la liste</button>
+    </div>
+  </div>
+
+  <nav class="tabbar" role="tablist" aria-label="Sections">
+    <button role="tab" data-tab="recipes" aria-selected="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2z"/><path d="M8 4v16"/><path d="M11 9h5M11 13h5"/></svg>
+      Recettes
+    </button>
+    <button role="tab" data-tab="list" aria-selected="false">
+      <span class="badge" data-badge hidden></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h2l2.4 11.2a1 1 0 0 0 1 .8h8.8a1 1 0 0 0 1-.8L20 8H6.5"/><circle cx="9.5" cy="20" r="1.2"/><circle cx="16.5" cy="20" r="1.2"/></svg>
+      Courses
+    </button>
+    <button role="tab" data-tab="settings" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      Réglages
+    </button>
+  </nav>
+</div>
+
+<dialog id="dlg-add">
+  <form class="dlg" id="form-add" method="dialog">
+    <h2 id="dlg-add-title">Ajouter une recette</h2>
+    <p class="hint" id="dlg-add-hint">Colle le lien de la recette : le serveur va la lire et en extraire le titre, le nombre de personnes et les ingrédients.</p>
+    <div class="field" id="f-url-wrap">
+      <label for="f-url">Lien de la recette</label>
+      <input id="f-url" type="url" placeholder="https://…" inputmode="url" autocomplete="off">
+    </div>
+    <div class="field" id="f-paste-wrap" hidden>
+      <label for="f-paste">Texte de la recette</label>
+      <textarea id="f-paste" placeholder="Colle ici le titre et la liste des ingrédients copiés depuis le site."></textarea>
+      <span class="sub">Utile quand un site refuse les robots ou n'a pas de lien.</span>
+    </div>
+    <div class="dlg-acts" id="step1-acts">
+      <button type="button" class="btn ghost sm left" id="btn-toggle-paste">Coller un texte à la place</button>
+      <button type="button" class="btn" id="btn-manual">Saisir à la main</button>
+      <button type="button" class="btn primary" id="btn-analyze">Importer</button>
+    </div>
+    <div id="step2" hidden>
+      <img class="preview-img" id="f-image" alt="" hidden>
+      <div class="field">
+        <label for="f-title">Titre</label>
+        <input id="f-title" required placeholder="Ex. Gratin dauphinois">
+      </div>
+      <div class="cols">
+        <div class="field">
+          <label for="f-serv">Pour combien de personnes</label>
+          <input id="f-serv" type="number" min="1" step="1" value="4" required>
+        </div>
+        <div class="field">
+          <label for="f-cat">Catégorie</label>
+          <input id="f-cat" list="cat-options" placeholder="Plats, Desserts…" autocomplete="off">
+          <datalist id="cat-options"></datalist>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-ingr">Ingrédients (un par ligne : quantité, unité, nom)</label>
+        <textarea id="f-ingr" placeholder="1 kg pommes de terre&#10;50 cl crème liquide&#10;2 gousses ail&#10;sel"></textarea>
+        <span class="sub">Les quantités sont recalculées selon le nombre de personnes choisi au moment des courses.</span>
+      </div>
+      <div class="field">
+        <label for="f-notes">Notes (facultatif)</label>
+        <input id="f-notes" placeholder="Ex. doubler la crème, cuisson 50 min">
+      </div>
+      <div class="dlg-acts">
+        <button type="button" class="btn ghost left" id="btn-back">← Retour</button>
+        <button type="button" class="btn" id="btn-cancel">Annuler</button>
+        <button type="submit" class="btn primary" id="btn-save">Enregistrer</button>
+      </div>
+    </div>
+    <div class="status" id="add-status" aria-live="polite"></div>
+  </form>
+</dialog>
+
+<dialog id="dlg-confirm">
+  <div class="dlg">
+    <h2 id="confirm-title">Confirmer</h2>
+    <p class="hint" id="confirm-text"></p>
+    <div class="dlg-acts">
+      <button type="button" class="btn" id="confirm-no">Annuler</button>
+      <button type="button" class="btn" id="confirm-alt" hidden></button>
+      <button type="button" class="btn danger" id="confirm-yes">Confirmer</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>
