@@ -1,6 +1,6 @@
 // Service worker : coquille de l'application en cache pour un démarrage instantané
 // et un affichage même hors connexion. L'API n'est jamais mise en cache.
-const VERSION = "gm-v3";
+const VERSION = "gm-v4";
 const SHELL = ["/", "/style.css", "/js/app.js", "/js/ingredients.js", "/js/catalog.js", "/icon.svg", "/icon-180.png", "/icon-512.png", "/manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {
@@ -18,9 +18,6 @@ self.addEventListener("fetch", (e) => {
     e.respondWith(fetch(e.request).then((r) => { const copy = r.clone(); caches.open(VERSION).then((c) => c.put("/", copy)); return r; }).catch(() => caches.match("/")));
     return;
   }
-  // fichiers statiques : cache d'abord, mise à jour en arrière-plan
-  e.respondWith(caches.match(e.request).then((cached) => {
-    const net = fetch(e.request).then((r) => { if (r.ok) caches.open(VERSION).then((c) => c.put(e.request, r.clone())); return r; }).catch(() => cached);
-    return cached || net;
-  }));
+  // fichiers de l'application : réseau d'abord (toujours à jour), cache seulement hors connexion
+  e.respondWith(fetch(e.request).then((r) => { if (r.ok) caches.open(VERSION).then((c) => c.put(e.request, r.clone())); return r; }).catch(() => caches.match(e.request)));
 });

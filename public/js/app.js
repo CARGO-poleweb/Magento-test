@@ -556,9 +556,11 @@ dlg.addEventListener("close", () => { S.editingId = null; });
 // ---------- Démarrage ----------
 function renderAll() { renderRecipes(); renderList(); renderPicker(); renderCats(); }
 if ("serviceWorker" in navigator) {
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (!reloaded) { reloaded = true; location.reload(); } });
   navigator.serviceWorker.register("/sw.js").then((reg) => {
     reg.addEventListener("updatefound", () => {
-      const w = reg.installing; w?.addEventListener("statechange", () => { if (w.state === "installed" && navigator.serviceWorker.controller) toast("Nouvelle version disponible : rouvre l'application pour l'appliquer."); });
+      const w = reg.installing; w?.addEventListener("statechange", () => { if (w.state === "installed" && navigator.serviceWorker.controller) toast("Nouvelle version installée."); });
     });
   }).catch(() => {});
 }
