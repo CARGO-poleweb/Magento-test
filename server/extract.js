@@ -154,17 +154,22 @@ async function ask(schema, system, user) {
   const c = client();
   if (!c) throw new ExtractError("Aucune clé API Anthropic configurée.", "no_api_key");
   let res;
+  const params = {
+    model: MODEL(), max_tokens: 16000,
+    output_config: { effort: EFFORT(), format: zodOutputFormat(schema) },
+    system, messages: [{ role: "user", content: user }],
+  };
   try {
-    res = await c.beta.messages.create({
-      model: MODEL(), max_tokens: 16000,
-      betas: ["server-side-fallback-2026-07-01"], fallbacks: "default",
-      output_config: { effort: EFFORT(), format: zodOutputFormat(schema) },
-      system, messages: [{ role: "user", content: user }],
-    });
+    // Les replis serveur (fallbacks) sont optionnels : CLAUDE_FALLBACKS=1 pour les activer.
+    res = process.env.CLAUDE_FALLBACKS === "1"
+      ? await c.beta.messages.create({ ...params, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" })
+      : await c.messages.create(params);
   } catch (e) {
+    const detail = (e && e.message ? String(e.message) : "").replace(/\s+/g, " ").slice(0, 300);
+    console.error("[claude]", MODEL(), e?.status, detail);
     if (e instanceof Anthropic.AuthenticationError) throw new ExtractError("Clé API Anthropic invalide.", "api_auth");
     if (e instanceof Anthropic.RateLimitError) throw new ExtractError("Trop de demandes à Claude, réessaie dans une minute.", "api_rate");
-    if (e instanceof Anthropic.APIError) throw new ExtractError(`Erreur de l'API Claude (${e.status}).`, "api_error");
+    if (e instanceof Anthropic.APIError) throw new ExtractError(`Erreur de l'API Claude (${e.status}) : ${detail}`, "api_error");
     throw new ExtractError("Claude est injoignable pour le moment.", "api_network");
   }
   if (res.stop_reason === "refusal") throw new ExtractError("Claude a refusé d'analyser cette page.", "api_refusal");
