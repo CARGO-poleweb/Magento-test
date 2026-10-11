@@ -1,17 +1,21 @@
 import express from "express";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { extractRecipe, extractFromText, claudeAvailable, ExtractError } from "./extract.js";
+import { mkdirSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
+import { extractRecipe, extractFromText, extractFromPhotos, claudeAvailable, ExtractError } from "./extract.js";
+import { hashPassword, verifyPassword, passwordProblem } from "./auth.js";
+import { uid } from "./db.js";
 import { mergeIngredients, parseIngredientLine } from "../public/js/ingredients.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
 
-export function createApp({ store, auth, extract = { extractRecipe, extractFromText } }) {
+export function createApp({ store, auth, extract = { extractRecipe, extractFromText, extractFromPhotos }, uploadsDir = join(root, "data", "uploads") }) {
+  mkdirSync(uploadsDir, { recursive: true });
 const app = express();
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "30mb" }));
 app.use(express.static(join(root, "public"), { index: "index.html", maxAge: "1h", etag: true }));
 
 // ---------- temps réel (SSE) ----------
@@ -27,15 +31,33 @@ const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).cat
 const bad = (res, msg, code = 400) => res.status(code).json({ error: msg });
 
 // ---------- auth ----------
-app.post("/api/login", (req, res) => {
-  if (!auth.checkPassword(req.body?.password)) return bad(res, "Mot de passe incorrect.", 401);
-  auth.setCookie(res, req.secure);
-  res.json({ ok: true });
+app.get("/api/me", (req, res) => res.json({ authed: !!auth.currentUser(req), user: auth.currentUser(req), needsSetup: auth.needsSetup(), claude: claudeAvailable() }));
+app.post("/api/setup", (req, res) => {
+  if (!auth.needsSetup()) return bad(res, "Un compte existe déjà : connecte-toi.", 409);
+  const name = String(req.body?.name || "").trim(); const pb = passwordProblem(req.body?.password);
+  if (!name) return bad(res, "Choisis un prénom ou un nom d'utilisateur.");
+  if (pb) return bad(res, pb);
+  store.createUser({ name, passwordHash: hashPassword(req.body.password), role: "admin" });
+  const r = auth.login(req, res, name, req.body.password);
+  res.status(201).json({ ok: true, user: r.user });
 });
-app.post("/api/logout", (req, res) => { auth.clearCookie(res); res.json({ ok: true }); });
-app.get("/api/me", (req, res) => res.json({ authed: auth.isAuthed(req), claude: claudeAvailable() }));
+app.post("/api/login", (req, res) => {
+  const r = auth.login(req, res, req.body?.name, req.body?.password);
+  if (r.error) return bad(res, r.error, r.status);
+  res.json({ ok: true, user: r.user });
+});
+app.post("/api/logout", (req, res) => { auth.logout(req, res); res.json({ ok: true }); });
 
 app.use("/api", auth.middleware);
+app.use("/uploads", auth.middleware, express.static(uploadsDir, { maxAge: "30d", immutable: true, fallthrough: false }));
+
+app.post("/api/account/password", (req, res) => {
+  const u = store.getUserByName(req.user.name);
+  if (!verifyPassword(req.body?.current || "", u.password_hash)) return bad(res, "Mot de passe actuel incorrect.", 401);
+  const pb = passwordProblem(req.body?.next); if (pb) return bad(res, pb);
+  store.setPassword(u.id, hashPassword(req.body.next)); res.json({ ok: true });
+});
+app.post("/api/account/logout-all", (req, res) => { store.deleteUserSessions(req.user.id); auth.logout(req, res); res.json({ ok: true }); });
 
 // ---------- lecture ----------
 app.get("/api/state", (req, res) => res.json(store.snapshot()));
@@ -61,6 +83,23 @@ app.post("/api/extract", wrap(async (req, res) => {
   }
 }));
 
+app.post("/api/extract/photo", wrap(async (req, res) => {
+  const photos = Array.isArray(req.body?.photos) ? req.body.photos : [];
+  const categories = store.listCategories().map((c) => c.name);
+  try {
+    const r = await extract.extractFromPhotos(photos, categories);
+    // la première photo devient l'illustration de la recette
+    const ext = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" }[photos[0].mediaType] || "jpg";
+    const name = uid() + "." + ext;
+    writeFileSync(join(uploadsDir, name), Buffer.from(photos[0].data, "base64"));
+    store.logImport("(photo)", r.method, true, `${r.ingredients.length} ingrédients`);
+    res.json({ ...r, url: "", image: "/uploads/" + name });
+  } catch (e) {
+    if (e instanceof ExtractError) { store.logImport("(photo)", "-", false, e.message); return res.status(422).json({ error: e.message, code: e.code }); }
+    throw e;
+  }
+}));
+
 // ---------- recettes ----------
 const cleanIngredients = (list) => (Array.isArray(list) ? list : []).map((i) =>
   typeof i === "string" ? parseIngredientLine(i) : { name: String(i?.name || "").trim(), qty: i?.qty == null || i.qty === "" ? null : Number(i.qty), unit: String(i?.unit || "").trim() })
@@ -69,7 +108,8 @@ const cleanIngredients = (list) => (Array.isArray(list) ? list : []).map((i) =>
 function recipeBody(b, id) {
   const title = String(b?.title || "").trim();
   if (!title) throw Object.assign(new Error("Le titre est obligatoire."), { status: 400 });
-  return { id, title, url: String(b.url || "").trim(), image: String(b.image || "").trim(), category: String(b.category || "").trim(),
+  const image = String(b.image || "").trim();
+  return { id, title, url: String(b.url || "").trim(), image: /^(https?:\/\/|\/uploads\/[\w.-]+$)/.test(image) ? image : "", category: String(b.category || "").trim(),
     servings: Math.max(1, Number(b.servings) | 0 || 4), ingredients: cleanIngredients(b.ingredients), notes: String(b.notes || "") };
 }
 app.post("/api/recipes", (req, res) => { const r = store.saveRecipe(recipeBody(req.body)); broadcast(); res.status(201).json(r); });
@@ -77,7 +117,12 @@ app.put("/api/recipes/:id", (req, res) => {
   if (!store.getRecipe(req.params.id)) return bad(res, "Recette introuvable.", 404);
   const r = store.saveRecipe(recipeBody(req.body, req.params.id)); broadcast(); res.json(r);
 });
-app.delete("/api/recipes/:id", (req, res) => { if (!store.deleteRecipe(req.params.id)) return bad(res, "Recette introuvable.", 404); broadcast(); res.json({ ok: true }); });
+app.delete("/api/recipes/:id", (req, res) => {
+  const r = store.getRecipe(req.params.id); if (!r) return bad(res, "Recette introuvable.", 404);
+  store.deleteRecipe(r.id);
+  if (/^\/uploads\/[\w.-]+$/.test(r.image || "") && !store.listRecipes().some((x) => x.image === r.image)) { const f = join(uploadsDir, r.image.slice(9)); if (existsSync(f)) unlinkSync(f); }
+  broadcast(); res.json({ ok: true });
+});
 
 // ---------- catégories ----------
 app.post("/api/categories", (req, res) => { const c = store.ensureCategory(req.body?.name); if (!c) return bad(res, "Nom vide."); broadcast(); res.status(201).json(c); });
@@ -125,11 +170,30 @@ app.post("/api/shopping/clear", (req, res) => {
   broadcast(); res.json({ ok: true });
 });
 
+// ---------- comptes (administrateur) ----------
+app.get("/api/admin/users", auth.adminOnly, (req, res) => res.json(store.listUsers()));
+app.post("/api/admin/users", auth.adminOnly, (req, res) => {
+  const name = String(req.body?.name || "").trim(); const pb = passwordProblem(req.body?.password);
+  if (!name) return bad(res, "Nom manquant."); if (pb) return bad(res, pb);
+  if (store.getUserByName(name)) return bad(res, "Ce nom est déjà pris.", 409);
+  res.status(201).json(store.createUser({ name, passwordHash: hashPassword(req.body.password), role: req.body?.role === "admin" ? "admin" : "member" }));
+});
+app.post("/api/admin/users/:id/password", auth.adminOnly, (req, res) => {
+  if (!store.getUser(req.params.id)) return bad(res, "Compte introuvable.", 404);
+  const pb = passwordProblem(req.body?.password); if (pb) return bad(res, pb);
+  store.setPassword(req.params.id, hashPassword(req.body.password)); store.deleteUserSessions(req.params.id); res.json({ ok: true });
+});
+app.delete("/api/admin/users/:id", auth.adminOnly, (req, res) => {
+  if (req.params.id === req.user.id) return bad(res, "Tu ne peux pas supprimer ton propre compte.");
+  if (!store.deleteUser(req.params.id)) return bad(res, "Compte introuvable.", 404);
+  res.json({ ok: true });
+});
+
 // ---------- back-office ----------
 app.get("/api/admin/status", (req, res) => res.json({
   claude: claudeAvailable(), model: process.env.CLAUDE_MODEL || "claude-opus-5-5", effort: process.env.CLAUDE_EFFORT || "medium",
   node: process.version, dbPath: process.env.DB_PATH || "data/garde-manger.db", uptime: Math.round(process.uptime()),
-  counts: { recipes: store.listRecipes().length, categories: store.listCategories().length, items: store.listItems().length },
+  counts: { recipes: store.listRecipes().length, categories: store.listCategories().length, items: store.listItems().length, users: store.countUsers() },
   imports: store.listImports(),
 }));
 app.get("/api/admin/export", (req, res) => {

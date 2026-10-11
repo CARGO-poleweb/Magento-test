@@ -20,7 +20,7 @@ if (existsSync(envFile)) {
 
 const PORT = Number(process.env.PORT || 3000);
 const store = openDb(process.env.DB_PATH || join(root, "data", "garde-manger.db"));
-const auth = makeAuth({ password: process.env.APP_PASSWORD, secret: process.env.SESSION_SECRET });
+const auth = makeAuth(store);
 const app = createApp({ store, auth });
 
 app.listen(PORT, () => {
