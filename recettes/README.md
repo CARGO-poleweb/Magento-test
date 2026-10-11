@@ -101,6 +101,24 @@ recettes.mondomaine.fr {
 }
 ```
 
+### Fly.io (environ 3 à 5 $ par mois)
+
+Le fichier `fly.toml` et le script `deploy-fly.sh` sont fournis. Sur ton ordinateur :
+
+```bash
+# 1. installer flyctl : https://fly.io/docs/flyctl/install/
+fly auth login
+# 2. déployer (nom unique au choix, clé API facultative)
+cd recettes
+./deploy-fly.sh garde-manger-pierre sk-ant-...
+```
+
+Le script crée l'application à Paris, un disque persistant de 1 Go pour la base et les photos,
+enregistre la clé API comme secret, puis déploie. L'adresse est `https://<nom>.fly.dev`, en
+HTTPS d'office : l'installation sur l'écran d'accueil fonctionne directement. La machine
+s'éteint quand personne n'utilise l'application et se rallume à la première requête (une à deux
+secondes). Pour changer la clé plus tard : `fly secrets set ANTHROPIC_API_KEY=... -a <nom>`.
+
 ### Sans Docker
 
 Un VPS avec Node 22 et `pm2` ou un service systemd suffit :
