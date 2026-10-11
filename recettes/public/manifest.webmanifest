@@ -1,0 +1,11 @@
+{
+  "name": "Le Garde-Manger",
+  "short_name": "Garde-Manger",
+  "description": "Carnet de recettes partagé et liste de courses",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f2f4ef",
+  "theme_color": "#23724a",
+  "lang": "fr",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
