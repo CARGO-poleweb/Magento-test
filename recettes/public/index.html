@@ -234,10 +234,15 @@
       <input id="f-url" type="url" placeholder="https://…" inputmode="url" autocomplete="off">
     </div>
     <div class="field" id="f-photo-wrap" hidden>
-      <label for="f-photo">Photos de la recette</label>
-      <input id="f-photo" type="file" accept="image/*" capture="environment" multiple>
+      <label>Photos de la recette <span id="f-photo-count" class="sub"></span></label>
+      <div class="photo-btns">
+        <button type="button" class="btn" id="btn-camera">📷 Prendre une photo</button>
+        <button type="button" class="btn" id="btn-gallery">🖼️ Choisir dans la galerie</button>
+      </div>
+      <input id="f-photo-cam" type="file" accept="image/*" capture="environment" hidden>
+      <input id="f-photo" type="file" accept="image/*" multiple hidden>
       <div class="thumbs" id="f-thumbs"></div>
-      <span class="sub">Page de livre, fiche manuscrite, magazine, écran… jusqu'à 4 photos pour une même recette. Claude lit le texte et en tire les ingrédients.</span>
+      <span class="sub">Page de livre, fiche manuscrite, magazine, écran… jusqu'à 4 photos pour une même recette (recto, verso, suite). Touche une vignette pour la retirer. Claude lit l'ensemble et en tire les ingrédients.</span>
     </div>
     <div class="field" id="f-paste-wrap" hidden>
       <label for="f-paste">Texte de la recette</label>
@@ -253,6 +258,7 @@
       <button type="button" class="btn primary" id="btn-analyze">Importer</button>
     </div>
     <div id="step2" hidden>
+      <div class="thumbs" id="f-saved-photos"></div>
       <img class="preview-img" id="f-image" alt="" hidden>
       <div class="field">
         <label for="f-title">Titre</label>

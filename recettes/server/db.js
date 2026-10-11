@@ -44,10 +44,13 @@ export function openDb(path) {
       ok INTEGER NOT NULL, message TEXT DEFAULT '', created_at INTEGER NOT NULL
     );
   `);
+  // migrations légères
+  const cols = db.prepare("PRAGMA table_info(recipes)").all().map((c) => c.name);
+  if (!cols.includes("photos")) db.exec("ALTER TABLE recipes ADD COLUMN photos TEXT NOT NULL DEFAULT '[]'");
   return new Store(db);
 }
 
-const rowRecipe = (r) => r && { ...r, ingredients: JSON.parse(r.ingredients) };
+const rowRecipe = (r) => r && { ...r, ingredients: JSON.parse(r.ingredients), photos: JSON.parse(r.photos || "[]") };
 const rowItem = (r) => r && { ...r, checked: !!r.checked, recipes: JSON.parse(r.recipes) };
 
 export class Store {
@@ -79,12 +82,13 @@ export class Store {
     const rec = {
       id: r.id || uid(), title: r.title, url: r.url || "", image: r.image || "", category: r.category || "",
       servings: Math.max(1, r.servings | 0 || 4), ingredients: JSON.stringify(r.ingredients || []),
+      photos: JSON.stringify(r.photos || []),
       notes: r.notes || "", created_at: prev?.created_at || now, updated_at: now,
     };
-    this.db.prepare(`INSERT INTO recipes (id, title, url, image, category, servings, ingredients, notes, created_at, updated_at)
-      VALUES (@id, @title, @url, @image, @category, @servings, @ingredients, @notes, @created_at, @updated_at)
+    this.db.prepare(`INSERT INTO recipes (id, title, url, image, category, servings, ingredients, photos, notes, created_at, updated_at)
+      VALUES (@id, @title, @url, @image, @category, @servings, @ingredients, @photos, @notes, @created_at, @updated_at)
       ON CONFLICT(id) DO UPDATE SET title=excluded.title, url=excluded.url, image=excluded.image, category=excluded.category,
-      servings=excluded.servings, ingredients=excluded.ingredients, notes=excluded.notes, updated_at=excluded.updated_at`).run(rec);
+      servings=excluded.servings, ingredients=excluded.ingredients, photos=excluded.photos, notes=excluded.notes, updated_at=excluded.updated_at`).run(rec);
     if (rec.category) this.ensureCategory(rec.category);
     return this.getRecipe(rec.id);
   }

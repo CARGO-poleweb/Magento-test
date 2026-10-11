@@ -88,12 +88,15 @@ app.post("/api/extract/photo", wrap(async (req, res) => {
   const categories = store.listCategories().map((c) => c.name);
   try {
     const r = await extract.extractFromPhotos(photos, categories);
-    // la première photo devient l'illustration de la recette
-    const ext = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" }[photos[0].mediaType] || "jpg";
-    const name = uid() + "." + ext;
-    writeFileSync(join(uploadsDir, name), Buffer.from(photos[0].data, "base64"));
-    store.logImport("(photo)", r.method, true, `${r.ingredients.length} ingrédients`);
-    res.json({ ...r, url: "", image: "/uploads/" + name });
+    // toutes les photos sont conservées ; la première illustre la recette
+    const saved = photos.map((p) => {
+      const ext = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" }[p.mediaType] || "jpg";
+      const name = uid() + "." + ext;
+      writeFileSync(join(uploadsDir, name), Buffer.from(p.data, "base64"));
+      return "/uploads/" + name;
+    });
+    store.logImport("(photo)", r.method, true, `${r.ingredients.length} ingrédients, ${photos.length} photo${photos.length > 1 ? "s" : ""}`);
+    res.json({ ...r, url: "", image: saved[0], photos: saved });
   } catch (e) {
     if (e instanceof ExtractError) { store.logImport("(photo)", "-", false, e.message); return res.status(422).json({ error: e.message, code: e.code }); }
     throw e;
@@ -109,7 +112,8 @@ function recipeBody(b, id) {
   const title = String(b?.title || "").trim();
   if (!title) throw Object.assign(new Error("Le titre est obligatoire."), { status: 400 });
   const image = String(b.image || "").trim();
-  return { id, title, url: String(b.url || "").trim(), image: /^(https?:\/\/|\/uploads\/[\w.-]+$)/.test(image) ? image : "", category: String(b.category || "").trim(),
+  const photos = (Array.isArray(b.photos) ? b.photos : []).map(String).filter((p) => /^\/uploads\/[\w.-]+$/.test(p)).slice(0, 8);
+  return { id, title, url: String(b.url || "").trim(), image: /^(https?:\/\/|\/uploads\/[\w.-]+$)/.test(image) ? image : photos[0] || "", photos, category: String(b.category || "").trim(),
     servings: Math.max(1, Number(b.servings) | 0 || 4), ingredients: cleanIngredients(b.ingredients), notes: String(b.notes || "") };
 }
 app.post("/api/recipes", (req, res) => { const r = store.saveRecipe(recipeBody(req.body)); broadcast(); res.status(201).json(r); });
@@ -120,7 +124,10 @@ app.put("/api/recipes/:id", (req, res) => {
 app.delete("/api/recipes/:id", (req, res) => {
   const r = store.getRecipe(req.params.id); if (!r) return bad(res, "Recette introuvable.", 404);
   store.deleteRecipe(r.id);
-  if (/^\/uploads\/[\w.-]+$/.test(r.image || "") && !store.listRecipes().some((x) => x.image === r.image)) { const f = join(uploadsDir, r.image.slice(9)); if (existsSync(f)) unlinkSync(f); }
+  const stillUsed = new Set(store.listRecipes().flatMap((x) => [x.image, ...(x.photos || [])]));
+  for (const p of new Set([r.image, ...(r.photos || [])])) {
+    if (/^\/uploads\/[\w.-]+$/.test(p || "") && !stillUsed.has(p)) { const f = join(uploadsDir, p.slice(9)); if (existsSync(f)) unlinkSync(f); }
+  }
   broadcast(); res.json({ ok: true });
 });
 
