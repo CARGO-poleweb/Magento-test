@@ -74,7 +74,9 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && !$
 
 async function boot() {
   const me = await api("/api/me");
-  S.claude = me.claude; S.user = me.user;
+  S.claude = me.claude; S.user = me.user; S.version = me.version;
+  $("#login-version").textContent = me.version ? "Version " + me.version : "";
+  $("#settings-sub").textContent = `Version ${me.version || "?"} · catégories, sauvegarde et état du serveur.`;
   if (!me.authed) return showLogin(me.needsSetup);
   $("#login").hidden = true; $("#app").hidden = false;
   $("#acc-name").textContent = me.user.name;
@@ -438,6 +440,7 @@ async function loadStatus() {
   const s = await api("/api/admin/status").catch(() => null); if (!s) return;
   const fmtDate = (t) => new Date(t).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   $("#status-kv").innerHTML = `
+    <dt>Version de l'application</dt><dd>${esc(s.version)}</dd>
     <dt>Extraction par Claude</dt><dd>${s.claude ? `<span class="pill ok">activée</span> ${esc(s.model)} · effort ${esc(s.effort)}` : `<span class="pill ko">désactivée</span> ajoute ANTHROPIC_API_KEY dans .env`}</dd>
     <dt>Recettes</dt><dd>${s.counts.recipes}</dd>
     <dt>Catégories</dt><dd>${s.counts.categories}</dd>

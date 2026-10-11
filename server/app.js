@@ -1,7 +1,7 @@
 import express from "express";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { mkdirSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
+import { mkdirSync, writeFileSync, existsSync, unlinkSync, readFileSync } from "node:fs";
 import { extractRecipe, extractFromText, extractFromPhotos, claudeAvailable, ExtractError } from "./extract.js";
 import { hashPassword, verifyPassword, passwordProblem } from "./auth.js";
 import { uid } from "./db.js";
@@ -9,6 +9,7 @@ import { mergeIngredients, parseIngredientLine, norm } from "../public/js/ingred
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
+const APP_VERSION = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
 
 export function createApp({ store, auth, extract = { extractRecipe, extractFromText, extractFromPhotos }, uploadsDir = join(root, "data", "uploads") }) {
   mkdirSync(uploadsDir, { recursive: true });
@@ -31,7 +32,7 @@ const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).cat
 const bad = (res, msg, code = 400) => res.status(code).json({ error: msg });
 
 // ---------- auth ----------
-app.get("/api/me", (req, res) => res.json({ authed: !!auth.currentUser(req), user: auth.currentUser(req), needsSetup: auth.needsSetup(), claude: claudeAvailable() }));
+app.get("/api/me", (req, res) => res.json({ authed: !!auth.currentUser(req), user: auth.currentUser(req), needsSetup: auth.needsSetup(), claude: claudeAvailable(), version: APP_VERSION }));
 app.post("/api/setup", (req, res) => {
   if (!auth.needsSetup()) return bad(res, "Un compte existe déjà : connecte-toi.", 409);
   const name = String(req.body?.name || "").trim(); const pb = passwordProblem(req.body?.password);
@@ -208,7 +209,7 @@ app.delete("/api/admin/users/:id", auth.adminOnly, (req, res) => {
 
 // ---------- back-office ----------
 app.get("/api/admin/status", (req, res) => res.json({
-  claude: claudeAvailable(), model: process.env.CLAUDE_MODEL || "claude-opus-5-5", effort: process.env.CLAUDE_EFFORT || "medium",
+  version: APP_VERSION, claude: claudeAvailable(), model: process.env.CLAUDE_MODEL || "claude-opus-5-5", effort: process.env.CLAUDE_EFFORT || "medium",
   node: process.version, dbPath: process.env.DB_PATH || "data/garde-manger.db", uptime: Math.round(process.uptime()),
   counts: { recipes: store.listRecipes().length, categories: store.listCategories().length, items: store.listItems().length, users: store.countUsers() },
   imports: store.listImports(),

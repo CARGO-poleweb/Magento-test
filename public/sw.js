@@ -1,6 +1,6 @@
 // Service worker : coquille de l'application en cache pour un démarrage instantané
 // et un affichage même hors connexion. L'API n'est jamais mise en cache.
-const VERSION = "gm-v4";
+const VERSION = "gm-v5";
 const SHELL = ["/", "/style.css", "/js/app.js", "/js/ingredients.js", "/js/catalog.js", "/icon.svg", "/icon-180.png", "/icon-512.png", "/manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {
