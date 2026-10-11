@@ -1,8 +1,9 @@
 # Le Garde-Manger
 
-Application autonome pour deux : un carnet de recettes trouvées sur Internet, classées par
-catégorie, et une liste de courses générée automatiquement selon le nombre de personnes,
-modifiable et synchronisée en direct entre vos appareils.
+Application web autonome et installable (PWA) pour deux : un carnet de recettes trouvées sur
+Internet ou photographiées, classées par catégorie, et une liste de courses générée
+automatiquement selon le nombre de personnes, modifiable et synchronisée en direct entre vos
+appareils.
 
 ## Ce qu'elle fait
 
@@ -13,6 +14,9 @@ modifiable et synchronisée en direct entre vos appareils.
   Avec une clé API, Claude normalise aussi les ingrédients (« 2 c. à s. d'huile » devient
   quantité 2, unité « c. à soupe », nom « huile »). Un texte collé ou une saisie à la main restent
   possibles.
+- **Importer une recette depuis une photo.** Page de livre, fiche manuscrite, magazine ou écran :
+  jusqu'à quatre photos par recette, redimensionnées dans le navigateur puis lues par Claude, qui
+  en tire titre, personnes et ingrédients. La première photo devient l'illustration de la recette.
 - **Catégories libres** : créées en les écrivant dans une recette ou depuis les réglages, où on
   les renomme, les ordonne et les supprime.
 - **Liste de courses** : on coche des recettes, on règle le nombre de personnes sur chacune, et la
@@ -21,8 +25,29 @@ modifiable et synchronisée en direct entre vos appareils.
   ajoute à la main. Les articles manuels survivent à une régénération.
 - **Synchronisation** : toute modification est poussée en direct aux autres appareils connectés
   (flux SSE), avec rafraîchissement au retour sur l'onglet.
-- **Back-office** (onglet Réglages) : catégories, export/import JSON de sauvegarde, état du serveur
-  (clé API, modèle, compteurs) et journal des cinquante derniers imports.
+- **Application installable** : manifeste, icônes et service worker. Sur iPhone, Partager puis
+  « Sur l'écran d'accueil » ; sur Android, « Installer l'application ». L'onglet Réglages > Installer
+  affiche la marche à suivre adaptée à l'appareil et permet de copier l'adresse à envoyer.
+- **Comptes nommés** : au premier démarrage, l'application propose de créer le compte
+  administrateur. Celui-ci invite les autres (prénom + mot de passe provisoire) depuis
+  Réglages > Comptes, peut réinitialiser un mot de passe ou supprimer un compte. Chacun change
+  ensuite son propre mot de passe et peut déconnecter tous ses appareils d'un coup.
+- **Back-office** (onglet Réglages) : catégories, installation, mon compte, comptes (admin),
+  export/import JSON de sauvegarde, état du serveur (clé API, modèle, compteurs) et journal des
+  cinquante derniers imports.
+
+## Sécurité
+
+- Mots de passe hachés avec scrypt (sel aléatoire, jamais stockés en clair), 8 caractères minimum.
+- Sessions stockées en base (jeton aléatoire de 256 bits, seul son empreinte SHA-256 est
+  conservée), cookie `HttpOnly`, `SameSite=Lax`, `Secure` en HTTPS, expiration après 180 jours
+  sans activité, révocables par l'utilisateur ou par l'administrateur.
+- Six tentatives de connexion par quart d'heure et par adresse IP.
+- Les photos importées sont servies uniquement aux personnes connectées.
+- Le serveur refuse de télécharger des adresses privées (protection contre les requêtes vers le
+  réseau local).
+- **Mettez l'application derrière HTTPS** : c'est indispensable pour l'installation en PWA (le
+  service worker ne s'enregistre qu'en HTTPS) et pour que le cookie reste confidentiel.
 
 ## Pile technique
 
@@ -30,15 +55,15 @@ modifiable et synchronisée en direct entre vos appareils.
 - Express 5, base SQLite dans un seul fichier (`data/garde-manger.db`)
 - SDK Anthropic (`@anthropic-ai/sdk`) avec sorties structurées (zod) pour l'extraction
 - Frontend sans framework : HTML, CSS et modules ES ; installable sur téléphone (manifest PWA)
-- Authentification par mot de passe partagé et cookie signé (HMAC), 180 jours
+- Comptes avec mots de passe scrypt, sessions en base, service worker pour l'installation
 
 ## Démarrer en local
 
 ```bash
 cd recettes
-cp .env.example .env     # puis éditer APP_PASSWORD, SESSION_SECRET, ANTHROPIC_API_KEY
+cp .env.example .env     # puis renseigner ANTHROPIC_API_KEY
 npm install
-npm start                # http://localhost:3000
+npm start                # http://localhost:3000 : créer le premier compte à l'écran
 ```
 
 `npm run dev` relance le serveur à chaque modification. `npm test` lance les tests (parseur
@@ -48,9 +73,7 @@ d'ingrédients, extraction JSON-LD, API de bout en bout en mémoire).
 
 | Variable | Rôle |
 |---|---|
-| `APP_PASSWORD` | Mot de passe partagé pour entrer (obligatoire) |
-| `SESSION_SECRET` | Secret de signature du cookie de session (obligatoire, longue chaîne aléatoire) |
-| `ANTHROPIC_API_KEY` | Active l'extraction par Claude. Sans clé : données structurées seulement |
+| `ANTHROPIC_API_KEY` | Active la lecture des photos et l'extraction par Claude. Sans clé : données structurées des sites seulement |
 | `CLAUDE_MODEL` | Modèle utilisé, `claude-opus-5-5` par défaut (`claude-sonnet-5-5` ou `claude-haiku-5-5` pour réduire le coût) |
 | `CLAUDE_EFFORT` | Niveau de réflexion, `medium` par défaut (`low` suffit souvent pour l'extraction) |
 | `PORT` | Port d'écoute, 3000 par défaut |
@@ -96,20 +119,26 @@ Toutes les routes sous `/api` exigent le cookie de session, sauf `login`, `logou
 
 | Méthode | Route | Rôle |
 |---|---|---|
-| `POST` | `/api/login` `{password}` | Ouvre la session |
+| `POST` | `/api/setup` `{name, password}` | Crée le premier compte (administrateur), une seule fois |
+| `POST` | `/api/login` `{name, password}` | Ouvre la session |
+| `POST` | `/api/account/password`, `/api/account/logout-all` | Mon compte |
 | `GET` | `/api/state` | Recettes, catégories, liste de courses, version |
 | `GET` | `/api/events` | Flux SSE : `change` à chaque modification |
 | `POST` | `/api/extract` `{url}` ou `{text}` | Extrait une recette sans l'enregistrer |
+| `POST` | `/api/extract/photo` `{photos:[{data, mediaType}]}` | Lit une recette sur des photos (base64) |
 | `POST/PUT/DELETE` | `/api/recipes[/:id]` | Recettes |
 | `POST/PUT/DELETE` | `/api/categories[/:id]`, `POST /api/categories/reorder` | Catégories |
 | `POST` | `/api/shopping/generate` `{selection:[{recipeId, persons}], mode}` | Génère la liste (`replace` ou `append`) |
 | `POST/PATCH/DELETE` | `/api/shopping/items[/:id]` | Articles de la liste |
 | `POST` | `/api/shopping/clear` `{onlyChecked}` | Vide la liste |
 | `GET` | `/api/admin/status`, `/api/admin/export` ; `POST /api/admin/import` | Back-office |
+| `GET/POST/DELETE` | `/api/admin/users[/:id]`, `POST /api/admin/users/:id/password` | Comptes (administrateur) |
 
 ## Limites connues
 
 - Un site qui bloque les robots (403, page vide chargée en JavaScript) ne peut pas être lu : coller
   le texte de la recette dans le formulaire, Claude le structure.
 - Les unités ne sont pas converties entre elles (500 g + 0,5 kg donnent deux lignes).
-- Un seul mot de passe pour la maison, pas de comptes séparés.
+- La lecture de photos exige une clé API : sans elle, l'option affiche un message et renvoie vers
+  le texte collé ou la saisie manuelle.
+- Les photos sont conservées dans `data/uploads` : à inclure dans les sauvegardes.

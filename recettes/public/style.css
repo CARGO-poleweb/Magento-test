@@ -175,3 +175,10 @@ dialog::backdrop { background: rgba(10, 20, 14, .55); }
 .login form { width: min(380px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; display: grid; gap: 14px; }
 .login h1 { font-size: 1.6rem; font-weight: 800; }
 .login p { margin: 0; color: var(--muted); font-size: 0.92rem; }
+
+/* Photos */
+.thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+.thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.login form + form { margin-top: 0; }
+.catlist li .role { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; color: var(--accent); background: var(--accent-soft); padding: 1px 7px; border-radius: 4px; }
+.catlist li .name { flex: 1; min-width: 0; font-weight: 600; }

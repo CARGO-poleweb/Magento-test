@@ -7,6 +7,7 @@ COPY server ./server
 COPY public ./public
 RUN mkdir -p /app/data
 VOLUME ["/app/data"]
+# data/ contient la base SQLite et les photos importées (data/uploads)
 EXPOSE 3000
 ENV PORT=3000 DB_PATH=/app/data/garde-manger.db
 CMD ["node", "--disable-warning=ExperimentalWarning", "server/index.js"]

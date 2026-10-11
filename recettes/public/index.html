@@ -7,7 +7,11 @@
 <meta name="theme-color" content="#23724a">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Garde-Manger">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap">
 <link rel="stylesheet" href="/style.css">
@@ -17,13 +21,31 @@
 <div class="login" id="login" hidden>
   <form id="form-login" autocomplete="on">
     <h1>Le Garde-Manger</h1>
-    <p>Carnet de recettes et liste de courses partagés. Entre le mot de passe de la maison.</p>
+    <p id="login-intro">Carnet de recettes et liste de courses partagés. Connecte-toi avec ton compte.</p>
+    <div class="field">
+      <label for="l-name">Prénom</label>
+      <input id="l-name" autocomplete="username" required autocapitalize="off">
+    </div>
     <div class="field">
       <label for="l-pass">Mot de passe</label>
       <input id="l-pass" type="password" autocomplete="current-password" required>
     </div>
     <div class="status err" id="login-status"></div>
     <button class="btn primary" type="submit">Entrer</button>
+  </form>
+  <form id="form-setup" autocomplete="on" hidden>
+    <h1>Bienvenue</h1>
+    <p>Aucun compte n'existe encore. Crée le tien : il sera administrateur et pourra inviter les autres depuis les réglages.</p>
+    <div class="field">
+      <label for="s-name">Ton prénom</label>
+      <input id="s-name" autocomplete="username" required autocapitalize="off">
+    </div>
+    <div class="field">
+      <label for="s-pass">Mot de passe (8 caractères minimum)</label>
+      <input id="s-pass" type="password" autocomplete="new-password" minlength="8" required>
+    </div>
+    <div class="status err" id="setup-status"></div>
+    <button class="btn primary" type="submit">Créer mon compte</button>
   </form>
 </div>
 
@@ -86,8 +108,60 @@
       </div>
       <div class="subtabs" role="tablist">
         <button role="tab" data-sub="cats" aria-selected="true">Catégories</button>
+        <button role="tab" data-sub="install" aria-selected="false">Installer</button>
+        <button role="tab" data-sub="account" aria-selected="false">Mon compte</button>
+        <button role="tab" data-sub="users" aria-selected="false" data-admin hidden>Comptes</button>
         <button role="tab" data-sub="backup" aria-selected="false">Sauvegarde</button>
         <button role="tab" data-sub="status" aria-selected="false">Serveur</button>
+      </div>
+
+      <div data-sub-view="install" hidden>
+        <div class="card-block">
+          <h3>Ajouter sur l'écran d'accueil</h3>
+          <p>L'application s'installe comme une appli normale : icône sur l'écran d'accueil, plein écran, ouverture instantanée.</p>
+          <div id="install-ready" hidden><button class="btn primary" id="btn-install">Installer l'application</button></div>
+          <div id="install-done" class="notice" hidden>Tu utilises déjà la version installée.</div>
+          <div id="install-ios" hidden><p><strong>Sur iPhone / iPad (Safari)</strong> : touche le bouton Partager <span aria-hidden="true">⎙</span> en bas de l'écran, puis « Sur l'écran d'accueil », puis « Ajouter ».</p></div>
+          <div id="install-android" hidden><p><strong>Sur Android (Chrome)</strong> : menu ⋮ en haut à droite, puis « Ajouter à l'écran d'accueil » ou « Installer l'application ».</p></div>
+        </div>
+        <div class="card-block">
+          <h3>Partager l'adresse</h3>
+          <p>Envoie ce lien à l'autre personne : elle se connecte avec le compte que tu lui as créé dans « Comptes ».</p>
+          <div class="addrow" style="margin:0"><input id="share-url" readonly aria-label="Adresse de l'application"><button class="btn" type="button" id="btn-copy-url">Copier</button></div>
+        </div>
+      </div>
+
+      <div data-sub-view="account" hidden>
+        <div class="card-block">
+          <h3>Connecté en tant que <span id="acc-name"></span></h3>
+          <p id="acc-role"></p>
+        </div>
+        <form class="card-block" id="form-password" autocomplete="on">
+          <h3>Changer mon mot de passe</h3>
+          <div class="field"><label for="p-cur">Mot de passe actuel</label><input id="p-cur" type="password" autocomplete="current-password" required></div>
+          <div class="field"><label for="p-new">Nouveau mot de passe (8 caractères minimum)</label><input id="p-new" type="password" autocomplete="new-password" minlength="8" required></div>
+          <div class="status" id="password-status"></div>
+          <div><button class="btn primary" type="submit">Enregistrer</button></div>
+        </form>
+        <div class="card-block">
+          <h3>Sessions</h3>
+          <p>Tu restes connecté 180 jours sur chaque appareil. En cas de doute (téléphone perdu), déconnecte tous les appareils d'un coup.</p>
+          <div><button class="btn danger" id="btn-logout-all">Déconnecter tous mes appareils</button></div>
+        </div>
+      </div>
+
+      <div data-sub-view="users" hidden>
+        <form class="card-block" id="form-adduser" autocomplete="off">
+          <h3>Inviter quelqu'un</h3>
+          <p>Crée son compte, puis communique-lui le prénom, le mot de passe et l'adresse de l'application. Il pourra ensuite changer son mot de passe.</p>
+          <div class="cols">
+            <div class="field"><label for="u-name">Prénom</label><input id="u-name" required autocapitalize="off" autocomplete="off"></div>
+            <div class="field"><label for="u-pass">Mot de passe provisoire</label><input id="u-pass" type="text" minlength="8" required autocomplete="off"></div>
+          </div>
+          <div class="status" id="adduser-status"></div>
+          <div><button class="btn primary" type="submit">Créer le compte</button></div>
+        </form>
+        <ul class="catlist" id="userlist"></ul>
       </div>
 
       <div data-sub-view="cats">
@@ -154,13 +228,22 @@
       <label for="f-url">Lien de la recette</label>
       <input id="f-url" type="url" placeholder="https://…" inputmode="url" autocomplete="off">
     </div>
+    <div class="field" id="f-photo-wrap" hidden>
+      <label for="f-photo">Photos de la recette</label>
+      <input id="f-photo" type="file" accept="image/*" capture="environment" multiple>
+      <div class="thumbs" id="f-thumbs"></div>
+      <span class="sub">Page de livre, fiche manuscrite, magazine, écran… jusqu'à 4 photos pour une même recette. Claude lit le texte et en tire les ingrédients.</span>
+    </div>
     <div class="field" id="f-paste-wrap" hidden>
       <label for="f-paste">Texte de la recette</label>
       <textarea id="f-paste" placeholder="Colle ici le titre et la liste des ingrédients copiés depuis le site."></textarea>
       <span class="sub">Utile quand un site refuse les robots ou n'a pas de lien.</span>
     </div>
     <div class="dlg-acts" id="step1-acts">
-      <button type="button" class="btn ghost sm left" id="btn-toggle-paste">Coller un texte à la place</button>
+      <div class="left" style="display:flex;gap:4px;flex-wrap:wrap">
+        <button type="button" class="btn ghost sm" id="btn-toggle-photo">📷 Photo</button>
+        <button type="button" class="btn ghost sm" id="btn-toggle-paste">Coller un texte</button>
+      </div>
       <button type="button" class="btn" id="btn-manual">Saisir à la main</button>
       <button type="button" class="btn primary" id="btn-analyze">Importer</button>
     </div>

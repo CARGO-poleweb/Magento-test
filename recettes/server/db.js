@@ -27,6 +27,14 @@ export function openDb(path) {
       created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
     );
     CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE, password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'member', created_at INTEGER NOT NULL, last_login INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS sessions (
+      token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at INTEGER NOT NULL, last_seen INTEGER NOT NULL, user_agent TEXT DEFAULT ''
+    );
     CREATE TABLE IF NOT EXISTS import_log (
       id INTEGER PRIMARY KEY AUTOINCREMENT, url TEXT NOT NULL, method TEXT NOT NULL,
       ok INTEGER NOT NULL, message TEXT DEFAULT '', created_at INTEGER NOT NULL
@@ -140,6 +148,32 @@ export class Store {
       return this.listItems();
     });
   }
+
+  // ----- utilisateurs & sessions -----
+  countUsers() { return this.db.prepare("SELECT COUNT(*) AS n FROM users").get().n; }
+  listUsers() { return this.db.prepare("SELECT id, name, role, created_at, last_login FROM users ORDER BY created_at").all(); }
+  getUser(id) { return this.db.prepare("SELECT id, name, role, created_at, last_login FROM users WHERE id = ?").get(id) || null; }
+  getUserByName(name) { return this.db.prepare("SELECT * FROM users WHERE name = ? COLLATE NOCASE").get(String(name).trim()) || null; }
+  createUser({ name, passwordHash, role = "member" }) {
+    const u = { id: uid(), name: String(name).trim(), password_hash: passwordHash, role, created_at: Date.now() };
+    this.db.prepare("INSERT INTO users (id, name, password_hash, role, created_at) VALUES (@id, @name, @password_hash, @role, @created_at)").run(u);
+    return this.getUser(u.id);
+  }
+  setPassword(id, passwordHash) { this.db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(passwordHash, id); }
+  touchLogin(id) { this.db.prepare("UPDATE users SET last_login = ? WHERE id = ?").run(Date.now(), id); }
+  deleteUser(id) { return this.db.prepare("DELETE FROM users WHERE id = ?").run(id).changes > 0; }
+  createSession(tokenHash, userId, userAgent) {
+    const now = Date.now();
+    this.db.prepare("INSERT INTO sessions (token_hash, user_id, created_at, last_seen, user_agent) VALUES (?, ?, ?, ?, ?)").run(tokenHash, userId, now, now, String(userAgent || "").slice(0, 200));
+  }
+  getSession(tokenHash) {
+    const s = this.db.prepare("SELECT s.*, u.name, u.role FROM sessions s JOIN users u ON u.id = s.user_id WHERE token_hash = ?").get(tokenHash);
+    if (s && Date.now() - s.last_seen > 60_000) this.db.prepare("UPDATE sessions SET last_seen = ? WHERE token_hash = ?").run(Date.now(), tokenHash);
+    return s || null;
+  }
+  deleteSession(tokenHash) { this.db.prepare("DELETE FROM sessions WHERE token_hash = ?").run(tokenHash); }
+  deleteUserSessions(userId) { this.db.prepare("DELETE FROM sessions WHERE user_id = ?").run(userId); }
+  purgeSessions(maxAgeMs) { this.db.prepare("DELETE FROM sessions WHERE last_seen < ?").run(Date.now() - maxAgeMs); }
 
   // ----- log -----
   logImport(url, method, ok, message = "") {

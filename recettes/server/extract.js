@@ -150,6 +150,7 @@ const MODEL = () => process.env.CLAUDE_MODEL || "claude-opus-5-5";
 const EFFORT = () => process.env.CLAUDE_EFFORT || "medium";
 
 async function ask(schema, system, user) {
+  // `user` : texte, ou tableau de blocs de contenu (images + texte)
   const c = client();
   if (!c) throw new ExtractError("Aucune clé API Anthropic configurée.", "no_api_key");
   let res;
@@ -180,6 +181,27 @@ export async function normalizeLinesWithClaude(lines, categories = []) {
     `Transforme chaque ligne d'ingrédient en objet {name, qty, unit}. Une ligne = un objet, dans le même ordre. ` +
     `Quantités converties en nombre (1/2 → 0.5, « une dizaine » → 10). Lignes :\n` + lines.map((l) => "- " + l).join("\n"));
   return r.ingredients;
+}
+
+const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+
+/** Lit une recette sur une ou plusieurs photos (livre, fiche manuscrite, écran). */
+export async function extractFromPhotos(photos, categories = []) {
+  if (!claudeAvailable()) throw new ExtractError("La lecture de photos demande une clé API Claude (ANTHROPIC_API_KEY).", "no_api_key");
+  if (!Array.isArray(photos) || !photos.length) throw new ExtractError("Aucune photo reçue.", "bad_photo");
+  if (photos.length > 4) throw new ExtractError("Quatre photos au maximum par recette.", "bad_photo");
+  const blocks = [];
+  for (const p of photos) {
+    if (!PHOTO_TYPES.has(p.mediaType)) throw new ExtractError("Format de photo non pris en charge (JPEG, PNG, WebP ou GIF).", "bad_photo");
+    if (typeof p.data !== "string" || !p.data) throw new ExtractError("Photo illisible.", "bad_photo");
+    if (Buffer.byteLength(p.data, "base64") > MAX_PHOTO_BYTES) throw new ExtractError("Photo trop lourde (5 Mo maximum).", "bad_photo");
+    blocks.push({ type: "image", source: { type: "base64", media_type: p.mediaType, data: p.data } });
+  }
+  const cats = categories.length ? categories.map((c) => `"${c}"`).join(", ") : '"Entrées", "Plats", "Desserts", "Apéro"';
+  blocks.push({ type: "text", text: `Ces photos montrent une recette (page de livre, fiche manuscrite, magazine ou écran). Lis-la et extrais : titre, nombre de personnes, catégorie (parmi ${cats}) et la liste complète des ingrédients avec quantités. Si plusieurs photos se suivent, elles font partie de la même recette. Si une quantité est illisible, mets qty à null plutôt que d'inventer.` });
+  const r = await ask(RecipeSchema, SYSTEM, blocks);
+  return { title: r.title, servings: r.servings, category: r.category, ingredients: r.ingredients.filter((i) => i.name), method: "photo+claude" };
 }
 
 export async function extractWithClaude(pageText, url, categories = []) {
