@@ -19,6 +19,10 @@ appareils.
   en tire titre, personnes et ingrédients. La première photo devient l'illustration de la recette.
 - **Catégories libres** : créées en les écrivant dans une recette ou depuis les réglages, où on
   les renomme, les ordonne et les supprime.
+- **Ajout rapide à la liste** : un champ « J'ai besoin de… » et des tuiles par rayon, à la manière
+  de Bring : un tap ajoute l'article, un second le retire, les articles utilisés récemment
+  reviennent en tête avec leur dernière quantité, et la recherche filtre les tuiles ou propose
+  d'ajouter un article libre (« 2 kg carottes »).
 - **Liste de courses** : on coche des recettes, on règle le nombre de personnes sur chacune, et la
   liste est générée avec les quantités recalculées et les doublons fusionnés (« farine » du gratin
   + « farine » de la tarte = une ligne). Chaque article se coche, se modifie ou se supprime ; on en
@@ -60,7 +64,6 @@ appareils.
 ## Démarrer en local
 
 ```bash
-cd recettes
 cp .env.example .env     # puis renseigner ANTHROPIC_API_KEY
 npm install
 npm start                # http://localhost:3000 : créer le premier compte à l'écran
@@ -84,7 +87,6 @@ d'ingrédients, extraction JSON-LD, API de bout en bout en mémoire).
 ### Docker (recommandé)
 
 ```bash
-cd recettes
 cp .env.example .env && nano .env
 docker compose up -d --build
 ```
@@ -109,7 +111,6 @@ Le fichier `fly.toml` et le script `deploy-fly.sh` sont fournis. Sur ton ordinat
 # 1. installer flyctl : https://fly.io/docs/flyctl/install/
 fly auth login
 # 2. déployer (nom unique au choix, clé API facultative)
-cd recettes
 ./deploy-fly.sh garde-manger-pierre sk-ant-...
 ```
 

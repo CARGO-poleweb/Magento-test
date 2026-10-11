@@ -1,4 +1,5 @@
 import { parseIngredientLine, ingredientToLine, scaleIngredient, fmtQty, norm } from "./ingredients.js";
+import { CATALOG, iconFor } from "./catalog.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -8,7 +9,7 @@ const pluralPersons = (n) => n + (n > 1 ? " personnes" : " personne");
 // ---------- État ----------
 const S = {
   tab: "recipes", sub: "cats", filter: "all", query: "",
-  recipes: [], categories: [], items: [], shoppingMeta: null, version: 0,
+  recipes: [], categories: [], items: [], shoppingMeta: null, history: [], version: 0, pickerQuery: "", closedSections: new Set(),
   selection: {}, openCards: new Set(), editingId: null, claude: false, extracted: null,
 };
 try { const s = JSON.parse(localStorage.getItem("gm.sel") || "{}"); if (s && typeof s === "object") S.selection = s; } catch {}
@@ -58,7 +59,7 @@ $("#btn-logout-all").addEventListener("click", async () => {
 let es = null;
 async function refresh() {
   const st = await api("/api/state");
-  Object.assign(S, { recipes: st.recipes, categories: st.categories, items: st.items, shoppingMeta: st.shoppingMeta, version: st.version });
+  Object.assign(S, { recipes: st.recipes, categories: st.categories, items: st.items, shoppingMeta: st.shoppingMeta, history: st.history || [], version: st.version });
   renderAll();
 }
 function connectEvents() {
@@ -251,6 +252,7 @@ function renderList() {
   }
   const row = (i) => `<li class="${i.checked ? "done" : ""}" data-id="${esc(i.id)}">
     <input type="checkbox" ${i.checked ? "checked" : ""} aria-label="Acheté : ${esc(i.name)}">
+    <span class="ico" aria-hidden="true">${iconFor(i.name)}</span>
     <div class="fields">
       <input class="n" value="${esc(i.name)}" aria-label="Nom" id="n-${esc(i.id)}">
       <input class="q" value="${esc([fmtQty(i.qty), i.unit].filter(Boolean).join(" "))}" placeholder="qté" aria-label="Quantité" id="q-${esc(i.id)}">
@@ -261,6 +263,53 @@ function renderList() {
   body.innerHTML = `<div class="group-title">À acheter · ${todo.length}</div><ul class="items">${todo.map(row).join("") || `<li><div class="fields" style="grid-column:1/-1;color:var(--muted)">Tout est dans le panier.</div></li>`}</ul>`
     + (done.length ? `<div class="group-title">Dans le panier · ${done.length}</div><ul class="items">${done.map(row).join("")}</ul>` : "");
 }
+
+// ---------- Sélecteur d'articles (tuiles) ----------
+const inList = (name) => S.items.find((i) => !i.checked && norm(i.name) === norm(name));
+function renderPicker() {
+  const q = norm(S.pickerQuery);
+  const tile = (name, icon, sub = "") => {
+    const on = !!inList(name);
+    return `<button type="button" class="tile ${on ? "on" : ""}" data-name="${esc(name)}" aria-pressed="${on}"><span class="ico" aria-hidden="true">${icon}</span><span class="lbl">${esc(name)}${sub ? `<br><span class="sub">${esc(sub)}</span>` : ""}</span></button>`;
+  };
+  const section = (key, title, tilesHtml, count) => tilesHtml ? `<section class="psec ${S.closedSections.has(key) && !q ? "closed" : ""}" data-sec="${esc(key)}">
+      <div class="psec-head" role="button" tabindex="0"><h3>${esc(title)}</h3><span class="n">${count}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></div>
+      <div class="tiles">${tilesHtml}</div></section>` : "";
+  const match = (name) => !q || norm(name).includes(q);
+  let html = "";
+  const recent = S.history.filter((h) => match(h.name)).slice(0, 12);
+  html += section("recent", "Utilisé récemment", recent.map((h) => tile(h.name, iconFor(h.name), h.qty != null ? [fmtQty(h.qty), h.unit].filter(Boolean).join(" ") : "")).join(""), recent.length);
+  for (const sec of CATALOG) {
+    const its = sec.items.filter(([n]) => match(n));
+    html += section(sec.name, sec.name, its.map(([n, ic]) => tile(n, ic)).join(""), its.length);
+  }
+  if (q && !recent.length && !CATALOG.some((sec) => sec.items.some(([n]) => match(n)))) {
+    html = `<div class="tiles"><button type="button" class="tile add" data-add="${esc(S.pickerQuery)}"><span class="ico" aria-hidden="true">＋</span><span class="lbl">Ajouter « ${esc(S.pickerQuery)} »</span></button></div>`;
+  } else if (q) {
+    html = `<div class="tiles" style="margin-top:8px"><button type="button" class="tile add" data-add="${esc(S.pickerQuery)}"><span class="ico" aria-hidden="true">＋</span><span class="lbl">Ajouter « ${esc(S.pickerQuery)} »</span></button></div>` + html;
+  }
+  $("#picker-body").innerHTML = html;
+}
+$("#picker-body").addEventListener("click", async (e) => {
+  const head = e.target.closest(".psec-head");
+  if (head) { const sec = head.closest(".psec"); const k = sec.dataset.sec; S.closedSections.has(k) ? S.closedSections.delete(k) : S.closedSections.add(k); sec.classList.toggle("closed"); return; }
+  const t = e.target.closest(".tile"); if (!t) return;
+  if (t.dataset.add != null) { await addFreeText(t.dataset.add); return; }
+  const name = t.dataset.name; const ex = inList(name);
+  t.classList.toggle("on", !ex); // retour immédiat, l'état réel revient par la synchro
+  if (ex) await act(() => api("/api/shopping/items/" + ex.id, { method: "DELETE" }));
+  else { const h = S.history.find((x) => norm(x.name) === norm(name)); await act(() => api("/api/shopping/items", { method: "POST", body: { name, qty: h?.qty ?? null, unit: h?.unit || "" } })); }
+});
+$("#picker-body").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("psec-head")) { e.preventDefault(); e.target.click(); } });
+async function addFreeText(text) {
+  const inp = $("#additem"); if (!text.trim()) return;
+  const ex = inList((parseIngredientLine(text) || { name: text }).name);
+  const ok = ex
+    ? await act(() => api("/api/shopping/items/" + ex.id, { method: "PATCH", body: { qtyText: text.replace(ex.name, "").trim() } }), "Quantité mise à jour")
+    : await act(() => api("/api/shopping/items", { method: "POST", body: { line: text } }));
+  if (ok) { inp.value = ""; S.pickerQuery = ""; renderPicker(); }
+}
+$("#additem").addEventListener("input", (e) => { S.pickerQuery = e.target.value; renderPicker(); });
 $("#list-body").addEventListener("change", async (e) => {
   const li = e.target.closest("li[data-id]"); if (!li) return;
   const id = li.dataset.id; const it = S.items.find((x) => x.id === id); if (!it) return;
@@ -275,11 +324,7 @@ $("#list-body").addEventListener("click", async (e) => {
   const b = e.target.closest("[data-act=del]"); if (!b) return;
   await act(() => api("/api/shopping/items/" + b.closest("li").dataset.id, { method: "DELETE" }));
 });
-$("#form-additem").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const inp = $("#additem"); if (!inp.value.trim()) return;
-  if (await act(() => api("/api/shopping/items", { method: "POST", body: { line: inp.value } }))) inp.value = "";
-});
+$("#form-additem").addEventListener("submit", async (e) => { e.preventDefault(); await addFreeText($("#additem").value); });
 $("#btn-clear-done").addEventListener("click", () => act(() => api("/api/shopping/clear", { method: "POST", body: { onlyChecked: true } }), "Articles cochés retirés"));
 $("#btn-clear-all").addEventListener("click", async () => {
   if (!S.items.length) return;
@@ -509,7 +554,7 @@ $("#form-add").addEventListener("submit", async (e) => {
 dlg.addEventListener("close", () => { S.editingId = null; });
 
 // ---------- Démarrage ----------
-function renderAll() { renderRecipes(); renderList(); renderCats(); }
+function renderAll() { renderRecipes(); renderList(); renderPicker(); renderCats(); }
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").then((reg) => {
     reg.addEventListener("updatefound", () => {

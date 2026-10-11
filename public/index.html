@@ -87,14 +87,19 @@
         <button class="btn sm ghost" id="btn-goto-recipes">Choisir des recettes</button>
       </div>
       <div class="listmeta" id="listmeta"></div>
-      <form class="addrow" id="form-additem" autocomplete="off">
-        <input id="additem" placeholder="Ajouter un article (ex. 6 œufs, papier alu…)" aria-label="Nouvel article">
-        <button class="btn basket" type="submit">Ajouter</button>
-      </form>
       <div id="list-body"></div>
       <div class="listacts" id="listacts" hidden>
         <button class="btn sm" id="btn-clear-done">Retirer les articles cochés</button>
         <button class="btn sm danger" id="btn-clear-all">Vider la liste</button>
+      </div>
+
+      <div class="picker" id="picker">
+        <form class="addrow picker-search" id="form-additem" autocomplete="off">
+          <input id="additem" placeholder="J'ai besoin de…" aria-label="Rechercher ou ajouter un article" autocapitalize="off">
+          <button class="btn basket" type="submit" aria-label="Ajouter">+</button>
+        </form>
+        <p class="status">Touche un article pour l'ajouter, touche-le à nouveau pour le retirer. Tape une quantité pour préciser : « 2 kg carottes ».</p>
+        <div id="picker-body"></div>
       </div>
     </section>
 
