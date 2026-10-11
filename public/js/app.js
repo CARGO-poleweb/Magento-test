@@ -107,10 +107,10 @@ $$("[data-sub]").forEach((b) => b.addEventListener("click", () => {
 }));
 
 // ---------- Confirmation ----------
-function confirmDlg(title, text, yesLabel = "Confirmer", altLabel = null) {
+function confirmDlg(title, text, yesLabel = "Confirmer", altLabel = null, yesClass = "btn danger") {
   return new Promise((res) => {
     const d = $("#dlg-confirm");
-    $("#confirm-title").textContent = title; $("#confirm-text").textContent = text; $("#confirm-yes").textContent = yesLabel;
+    $("#confirm-title").textContent = title; $("#confirm-text").textContent = text; $("#confirm-yes").textContent = yesLabel; $("#confirm-yes").className = yesClass;
     const alt = $("#confirm-alt"); alt.hidden = !altLabel; if (altLabel) alt.textContent = altLabel;
     const done = (v) => { d.onclose = null; d.close(); res(v); };
     $("#confirm-yes").onclick = () => done(true); $("#confirm-no").onclick = () => done(false); alt.onclick = () => done("alt");
@@ -216,16 +216,17 @@ $("#btn-unselect").addEventListener("click", () => { S.selection = {}; saveSel()
 $("#btn-generate").addEventListener("click", async () => {
   const selection = Object.entries(S.selection).filter(([id]) => S.recipes.some((r) => r.id === id)).map(([recipeId, persons]) => ({ recipeId, persons }));
   if (!selection.length) return;
-  let mode = "replace";
-  const existing = S.items.filter((i) => i.src === "recipe").length;
-  if (existing) {
-    const r = await confirmDlg("Une liste existe déjà", `${existing} article(s) viennent déjà de recettes. Les remplacer, ou ajouter les nouveaux à la suite ? Les articles saisis à la main sont conservés dans les deux cas.`, "Remplacer", "Ajouter à la suite");
-    if (!r) return; if (r === "alt") mode = "append";
+  let mode = "add";
+  if (S.items.length) {
+    const r = await confirmDlg("La liste contient déjà des articles",
+      `Ajouter les ingrédients de ${selection.length > 1 ? "ces recettes" : "cette recette"} à la liste actuelle (les quantités d'un même ingrédient s'additionnent), ou repartir d'une liste neuve ? Les articles saisis à la main sont conservés dans les deux cas.`,
+      "Ajouter à la liste", "Remplacer la liste", "btn primary");
+    if (!r) return; if (r === "alt") mode = "replace";
   }
-  const btn = $("#btn-generate"); btn.disabled = true; btn.textContent = "Génération…";
+  const btn = $("#btn-generate"); btn.disabled = true; btn.textContent = "Ajout…";
   const r = await act(() => api("/api/shopping/generate", { method: "POST", body: { selection, mode } }));
-  btn.disabled = false; btn.textContent = "Générer la liste";
-  if (r) { S.selection = {}; saveSel(); toast(`Liste générée : ${r.count} articles`); await refresh(); setTab("list"); }
+  btn.disabled = false; btn.textContent = "Ajouter aux courses";
+  if (r) { S.selection = {}; saveSel(); toast(mode === "add" ? `${r.count} ingrédient${r.count > 1 ? "s" : ""} ajouté${r.count > 1 ? "s" : ""} aux courses` : `Liste générée : ${r.count} articles`); await refresh(); setTab("list"); }
 });
 
 // ---------- Liste de courses ----------
@@ -240,7 +241,7 @@ function renderList() {
   $$("[data-badge]").forEach((b) => { b.hidden = !todo.length; b.textContent = todo.length; });
   const m = S.shoppingMeta;
   $("#listmeta").innerHTML = m && m.sources?.length
-    ? `<span>Générée le ${new Date(m.generatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} à ${new Date(m.generatedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} pour :</span>` + m.sources.map((s) => `<span class="src">${esc(s.title)} · ${s.persons} pers.</span>`).join("")
+    ? `<span>Dernier ajout le ${new Date(m.generatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} à ${new Date(m.generatedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} pour :</span>` + m.sources.map((s) => `<span class="src">${esc(s.title)} · ${s.persons} pers.</span>`).join("")
     : "";
   $("#listacts").hidden = !items.length;
   $("#btn-clear-done").disabled = !done.length;

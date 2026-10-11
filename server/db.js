@@ -134,8 +134,8 @@ export class Store {
   updateItem(id, patch) {
     const cur = this.getItem(id); if (!cur) return null;
     const next = { ...cur, ...patch, updated_at: Date.now() };
-    this.db.prepare("UPDATE shopping_items SET name = ?, qty = ?, unit = ?, checked = ?, position = ?, updated_at = ? WHERE id = ?")
-      .run(String(next.name).trim(), next.qty ?? null, next.unit || "", next.checked ? 1 : 0, next.position | 0, next.updated_at, id);
+    this.db.prepare("UPDATE shopping_items SET name = ?, qty = ?, unit = ?, checked = ?, position = ?, recipes = ?, src = ?, updated_at = ? WHERE id = ?")
+      .run(String(next.name).trim(), next.qty ?? null, next.unit || "", next.checked ? 1 : 0, next.position | 0, JSON.stringify(next.recipes || []), next.src || "manual", next.updated_at, id);
     return this.getItem(id);
   }
   deleteItem(id) { return this.db.prepare("DELETE FROM shopping_items WHERE id = ?").run(id).changes > 0; }
