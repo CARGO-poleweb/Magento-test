@@ -177,7 +177,7 @@ function renderRecipes() {
           <button class="iconbtn" data-act="del" aria-label="Supprimer" title="Supprimer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
         </div>
       </div>
-      <div class="ingr-preview">Ingrédients pour ${pluralPersons(persons)} :<ul>${ingr.map((i) => `<li>${esc(ingredientToLine(scaleIngredient(i, persons, r.servings)))}</li>`).join("")}</ul>${r.notes ? `<p style="margin:6px 0 0"><em>${esc(r.notes)}</em></p>` : ""}</div>
+      <div class="ingr-preview">Ingrédients pour ${pluralPersons(persons)} :<ul>${ingr.map((i) => `<li>${esc(ingredientToLine(scaleIngredient(i, persons, r.servings)))}</li>`).join("")}</ul>${r.notes ? `<p style="margin:6px 0 0"><em>${esc(r.notes)}</em></p>` : ""}${(r.photos || []).length ? `<div class="photo-strip">${r.photos.map((p, i) => `<a href="${esc(p)}" target="_blank" rel="noopener" title="Photo ${i + 1}"><img src="${esc(p)}" alt="Photo ${i + 1} de la recette" loading="lazy"></a>`).join("")}</div>` : ""}</div>
     </article>`;
   }).join("");
   renderSelbar();
@@ -460,8 +460,10 @@ function fillForm(r) {
   $("#f-title").value = r.title || ""; $("#f-serv").value = r.servings || 4; $("#f-cat").value = r.category || "";
   $("#f-ingr").value = (r.ingredients || []).map(ingredientToLine).join("\n"); $("#f-notes").value = r.notes || "";
   if (r.url) $("#f-url").value = r.url;
-  const img = $("#f-image"); img.hidden = !r.image; if (r.image) img.src = r.image;
-  S.extracted = { image: r.image || "" };
+  const saved = Array.isArray(r.photos) ? r.photos : [];
+  $("#f-saved-photos").innerHTML = saved.map((p, i) => `<span class="th"><img src="${esc(p)}" alt="Photo ${i + 1}"><span class="num">${i + 1}</span></span>`).join("");
+  const img = $("#f-image"); img.hidden = !r.image || saved.length > 0; if (r.image) img.src = r.image;
+  S.extracted = { image: r.image || "", photos: saved };
 }
 let photos = []; // [{data(base64), mediaType, previewUrl}]
 async function compressPhoto(file) {
@@ -474,25 +476,34 @@ async function compressPhoto(file) {
   const url = c.toDataURL("image/jpeg", 0.85);
   return { data: url.split(",")[1], mediaType: "image/jpeg", previewUrl: url };
 }
-$("#f-photo").addEventListener("change", async (e) => {
-  const files = [...e.target.files].slice(0, 4 - photos.length);
-  const st = $("#add-status"); st.className = "status"; st.textContent = files.length ? "Préparation des photos…" : "";
+const MAX_PHOTOS = 4;
+async function onPhotoFiles(e) {
+  const files = [...e.target.files].slice(0, MAX_PHOTOS - photos.length);
+  const st = $("#add-status"); st.className = "status";
+  if (e.target.files.length > files.length) toast(`${MAX_PHOTOS} photos au maximum par recette`);
+  if (!files.length) { e.target.value = ""; return; }
+  st.textContent = "Préparation des photos…";
   for (const f of files) { const p = await compressPhoto(f); p.previewUrl ||= URL.createObjectURL(f); photos.push(p); }
   e.target.value = ""; renderThumbs();
-  st.textContent = photos.length ? `${photos.length} photo${photos.length > 1 ? "s" : ""} prête${photos.length > 1 ? "s" : ""}. Clique sur « Importer ».` : "";
-});
-function renderThumbs() {
-  $("#f-thumbs").innerHTML = photos.map((p, i) => `<img src="${p.previewUrl}" alt="Photo ${i + 1}" title="Cliquer pour retirer" data-i="${i}">`).join("");
+  st.textContent = photos.length < MAX_PHOTOS ? `${photos.length} photo${photos.length > 1 ? "s" : ""} prête${photos.length > 1 ? "s" : ""}. Ajoute la suite si la recette continue, puis « Importer ».` : "4 photos : clique sur « Importer ».";
 }
-$("#f-thumbs").addEventListener("click", (e) => { const i = e.target.dataset?.i; if (i == null) return; photos.splice(Number(i), 1); renderThumbs(); });
+$("#f-photo").addEventListener("change", onPhotoFiles);
+$("#f-photo-cam").addEventListener("change", onPhotoFiles);
+$("#btn-camera").addEventListener("click", () => $("#f-photo-cam").click());
+$("#btn-gallery").addEventListener("click", () => $("#f-photo").click());
+function renderThumbs() {
+  $("#f-thumbs").innerHTML = photos.map((p, i) => `<span class="th"><img src="${p.previewUrl}" alt="Photo ${i + 1}"><span class="num">${i + 1}</span><button type="button" class="rm" data-i="${i}" aria-label="Retirer la photo ${i + 1}">×</button></span>`).join("");
+  $("#f-photo-count").textContent = photos.length ? `${photos.length} / ${MAX_PHOTOS}` : "";
+  const full = photos.length >= MAX_PHOTOS; $("#btn-camera").disabled = full; $("#btn-gallery").disabled = full;
+}
+$("#f-thumbs").addEventListener("click", (e) => { const b = e.target.closest(".rm"); if (!b) return; photos.splice(Number(b.dataset.i), 1); renderThumbs(); });
 $("#btn-toggle-photo").addEventListener("click", () => {
   const w = $("#f-photo-wrap"); w.hidden = !w.hidden;
   if (!w.hidden && !S.claude) { $("#add-status").className = "status err"; $("#add-status").textContent = "La lecture de photos demande une clé API Claude sur le serveur (voir Réglages > Serveur)."; }
-  if (!w.hidden && !photos.length) $("#f-photo").click();
 });
 
 function openAdd() {
-  S.editingId = null; S.extracted = null; photos = []; renderThumbs(); $("#f-photo-wrap").hidden = true;
+  S.editingId = null; S.extracted = null; photos = []; renderThumbs(); $("#f-photo-wrap").hidden = true; $("#f-saved-photos").innerHTML = "";
   $("#dlg-add-title").textContent = "Ajouter une recette";
   ["#f-url", "#f-paste", "#f-title", "#f-ingr", "#f-cat", "#f-notes"].forEach((s) => ($(s).value = ""));
   $("#f-serv").value = 4; $("#f-image").hidden = true; $("#f-paste-wrap").hidden = true;
@@ -543,7 +554,7 @@ $("#form-add").addEventListener("submit", async (e) => {
   const body = {
     title: $("#f-title").value.trim(), servings: Math.max(1, parseInt($("#f-serv").value, 10) || 4),
     category: $("#f-cat").value.trim(), url: $("#f-url").value.trim(), notes: $("#f-notes").value.trim(),
-    image: S.extracted?.image || "",
+    image: S.extracted?.image || "", photos: S.extracted?.photos || [],
     ingredients: $("#f-ingr").value.split(/\r?\n/).map(parseIngredientLine).filter((i) => i && i.name),
   };
   if (!body.title) { $("#f-title").focus(); return; }

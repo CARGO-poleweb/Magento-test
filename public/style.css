@@ -208,3 +208,10 @@ dialog::backdrop { background: rgba(10, 20, 14, .55); }
 .items .ico { font-size: 1.15rem; line-height: 1; width: 1.4em; text-align: center; }
 .items li { grid-template-columns: auto auto 1fr auto; }
 .items li .from { grid-column: 3; }
+
+.photo-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.thumbs .th { position: relative; }
+.thumbs .th .rm { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: var(--fg); color: var(--bg); font-size: 0.8rem; line-height: 22px; padding: 0; }
+.thumbs .num { position: absolute; left: 4px; bottom: 4px; background: rgba(0,0,0,.55); color: #fff; font-size: 0.7rem; padding: 0 5px; border-radius: 4px; }
+.photo-strip { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.photo-strip a img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); display: block; }

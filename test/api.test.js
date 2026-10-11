@@ -95,17 +95,20 @@ test("auth : limitation des tentatives", async () => {
 test("photo : extraction, image stockée et servie derrière l'authentification", async () => {
   const empty = await call("/api/extract/photo", { method: "POST", body: { photos: [] } });
   assert.equal(empty.status, 422);
-  const r = await call("/api/extract/photo", { method: "POST", body: { photos: [{ data: PNG_1PX, mediaType: "image/png" }] } });
+  const r = await call("/api/extract/photo", { method: "POST", body: { photos: [{ data: PNG_1PX, mediaType: "image/png" }, { data: PNG_1PX, mediaType: "image/png" }] } });
   assert.equal(r.status, 200);
   assert.equal(r.data.title, "Tarte de Mamie");
   assert.match(r.data.image, /^\/uploads\/[\w.-]+\.png$/);
-  assert.ok(existsSync(join(uploadsDir, r.data.image.slice(9))));
+  assert.equal(r.data.photos.length, 2, "les deux photos sont conservées");
+  assert.equal(r.data.photos[0], r.data.image);
+  for (const p of r.data.photos) assert.ok(existsSync(join(uploadsDir, p.slice(9))));
   assert.equal((await fetch(base + r.data.image)).status, 401, "sans cookie");
   assert.equal((await fetch(base + r.data.image, { headers: { cookie } })).status, 200);
   const saved = await call("/api/recipes", { method: "POST", body: r.data });
   assert.equal(saved.data.image, r.data.image);
+  assert.deepEqual(saved.data.photos, r.data.photos);
   await call("/api/recipes/" + saved.data.id, { method: "DELETE" });
-  assert.ok(!existsSync(join(uploadsDir, r.data.image.slice(9))), "fichier supprimé avec la recette");
+  for (const p of r.data.photos) assert.ok(!existsSync(join(uploadsDir, p.slice(9))), "fichiers supprimés avec la recette");
 });
 
 test("extraction + enregistrement + catégorie auto", async () => {
